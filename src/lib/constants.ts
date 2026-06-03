@@ -1,5 +1,5 @@
-export const LOGO_URL =
-  "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
+import logoAsset from "../assets/renzy-logo.jpeg.asset.json";
+export const LOGO_URL = logoAsset.url;
 
 export const WHATSAPP_LINK = "https://wa.me/2348000000000";
 
