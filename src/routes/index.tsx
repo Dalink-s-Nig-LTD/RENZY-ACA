@@ -219,11 +219,26 @@ function LiveChatWidget({ onClose }: { onClose: () => void }) {
 function EnrollForm({ onClose }: { onClose: () => void }) {
   const [form, setForm] = useState({ name: "", email: "", phone: "", role: "", message: "" });
   const [submitted, setSubmitted] = useState(false);
-  const submit = (e: React.FormEvent) => {
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Enrollment:", form);
-    setSubmitted(true);
-    setTimeout(onClose, 3000);
+    setSending(true);
+    setError(null);
+    const res = await sendFormToEmail("New PMI-ACP Enrollment Application — Renzy Academy", {
+      "Full Name": form.name,
+      Email: form.email,
+      Phone: form.phone,
+      "Current Role": form.role || "—",
+      Message: form.message || "—",
+    });
+    setSending(false);
+    if (res.ok) {
+      setSubmitted(true);
+      setTimeout(onClose, 3000);
+    } else {
+      setError("Could not submit right now. Please try again or email info@renzyacademy.org.");
+    }
   };
   return (
     <ModalOverlay onClose={onClose}>
@@ -254,7 +269,10 @@ function EnrollForm({ onClose }: { onClose: () => void }) {
               <label>Message (Optional)</label>
               <textarea value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} placeholder="Questions or preferred cohort?" rows={3} />
             </div>
-            <button type="submit" className="btn-primary" style={{ width: "100%" }}>Submit Application</button>
+            {error && <p style={{ color: "#E31B23", fontSize: ".9rem", marginBottom: ".75rem" }}>{error}</p>}
+            <button type="submit" disabled={sending} className="btn-primary" style={{ width: "100%" }}>
+              {sending ? "Submitting..." : "Submit Application"}
+            </button>
           </form>
           <div style={{ marginTop: "1.5rem", textAlign: "center" }}><ContactInfo variant="modal" /></div>
         </>
