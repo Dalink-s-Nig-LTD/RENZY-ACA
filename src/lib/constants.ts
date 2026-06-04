@@ -43,16 +43,21 @@ export const CURRICULUM = [
     topics: ["PMI-ACP exam blueprint", "3 full-length mock exams", "Time management strategies", "Application & scheduling support"] },
 ];
 
-export const PRICING_PLANS = [
-  { name: "Self-Paced", price: "$299", period: "one-time", description: "Learn on your own schedule.",
-    features: ["40h recorded video lessons", "Downloadable resources", "1 mock exam", "Community forum access", "6-month access"],
-    cta: "Get Started", popular: false },
-  { name: "Live Cohort", price: "$599", period: "one-time", description: "Most popular for serious candidates.",
-    features: ["Everything in Self-Paced", "Live instructor-led sessions", "3 full mock exams", "1-on-1 coaching call", "PMI-ACP application support", "12-month access"],
+type PricingPlan = {
+  name: string;
+  price: string;
+  regularPrice?: string;
+  period: string;
+  description: string;
+  features: string[];
+  cta: string;
+  popular: boolean;
+};
+
+export const PRICING_PLANS: PricingPlan[] = [
+  { name: "PMI-ACP® Exam Prep", price: "₦200,000", regularPrice: "₦350,000", period: "Save ₦150,000 — Promo ends June 20, 2026", description: "Two weeks intensive, instructor-led training.",
+    features: ["Live instructor-led sessions", "PMI-ACP® exam-focused preparation", "Mock exams & practice questions", "Mentorship & post-training support", "Study resources & downloadable guides", "Career-focused coaching"],
     cta: "Enroll Now", popular: true },
-  { name: "Enterprise", price: "Custom", period: "team pricing", description: "For teams of 5 or more.",
-    features: ["Everything in Live Cohort", "Private cohort for your team", "Custom curriculum modules", "Dedicated success manager", "Reporting & analytics"],
-    cta: "Contact Sales", popular: false },
 ];
 
 // Next cohort: 30 days from now
