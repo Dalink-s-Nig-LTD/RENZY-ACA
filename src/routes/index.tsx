@@ -164,11 +164,24 @@ function LiveChatWidget({ onClose }: { onClose: () => void }) {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [submitted, setSubmitted] = useState(false);
-  const submit = (e: React.FormEvent) => {
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Live chat:", { name, email, message });
-    setSubmitted(true);
-    setTimeout(onClose, 3000);
+    setSending(true);
+    setError(null);
+    const res = await sendFormToEmail("New Live Support Message — Renzy Academy", {
+      Name: name,
+      Email: email,
+      Message: message,
+    });
+    setSending(false);
+    if (res.ok) {
+      setSubmitted(true);
+      setTimeout(onClose, 3000);
+    } else {
+      setError("Could not send right now. Please try again or email info@renzyacademy.org.");
+    }
   };
   return (
     <ModalOverlay onClose={onClose}>
@@ -191,7 +204,10 @@ function LiveChatWidget({ onClose }: { onClose: () => void }) {
               <label>Message *</label>
               <textarea required value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Describe your question..." rows={4} />
             </div>
-            <button type="submit" className="btn-primary" style={{ width: "100%" }}>Send to Support Team</button>
+            {error && <p style={{ color: "#E31B23", fontSize: ".9rem", marginBottom: ".75rem" }}>{error}</p>}
+            <button type="submit" disabled={sending} className="btn-primary" style={{ width: "100%" }}>
+              {sending ? "Sending..." : "Send to Support Team"}
+            </button>
           </form>
           <div style={{ marginTop: "1.5rem" }}><ContactInfo variant="modal" /></div>
         </>
