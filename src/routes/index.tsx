@@ -532,6 +532,11 @@ function Index() {
             <span className="logo-text" style={{ color: "white" }}>RENZY<span style={{ color: "#E31B23" }}>.</span>ACADEMY</span>
           </a>
           <ContactInfo variant="footer" />
+          <div className="footer-links" style={{ marginTop: "1rem" }}>
+            <a href="/privacy-policy">Privacy Policy</a>
+            <span style={{ color: "rgba(255,255,255,.3)" }}>|</span>
+            <a href="/cookie-policy">Cookie Policy</a>
+          </div>
           <p>© 2026 Renzy Academy. All rights reserved.</p>
         </div>
       </footer>
