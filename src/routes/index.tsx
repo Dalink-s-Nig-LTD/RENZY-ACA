@@ -563,7 +563,7 @@ function Index() {
             <p>Do not wait until the market moves ahead without you.</p>
             <div className="cta-buttons">
               <button onClick={openEnroll} className="btn-white">Enroll Now</button>
-              <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" className="btn-outline-white">WhatsApp Us</a>
+              <button type="button" onClick={() => openExternal(WHATSAPP_LINK)} className="btn-outline-white">WhatsApp Us</button>
             </div>
             <ContactInfo variant="inline" />
           </div>
