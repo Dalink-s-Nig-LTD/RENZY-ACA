@@ -544,6 +544,7 @@ function Index() {
           <p>© 2026 Renzy Academy. All rights reserved.</p>
         </div>
       </footer>
+      <CookieConsent />
     </div>
   );
 }
