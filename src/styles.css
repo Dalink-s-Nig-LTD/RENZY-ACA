@@ -429,3 +429,21 @@ body {
   cursor: pointer; margin-top: .75rem; padding: .5rem; font-size: .9rem;
 }
 .ai-live-link:hover { text-decoration: underline; }
+
+/* ── Policy pages ── */
+.policy-page .renzy-nav { position: relative; }
+.policy-content { padding: 4rem 1.5rem; max-width: 800px; }
+.policy-content h1 { font-size: 2.2rem; margin-bottom: .25rem; }
+.policy-updated { color: var(--r-text-light); margin-bottom: 2.5rem; font-size: .9rem; }
+.policy-content section { margin-bottom: 2.5rem; }
+.policy-content h2 { font-size: 1.2rem; margin-bottom: .75rem; color: var(--r-dark); }
+.policy-content p { color: var(--r-text-light); margin-bottom: 1rem; }
+.policy-content ul { padding-left: 1.25rem; margin-bottom: 1rem; color: var(--r-text-light); }
+.policy-content li { margin-bottom: .5rem; }
+.policy-content a { color: var(--r-red); text-decoration: none; }
+.policy-content a:hover { text-decoration: underline; }
+
+/* ── Footer links ── */
+.footer-links { display: flex; gap: .75rem; justify-content: center; align-items: center; font-size: .85rem; }
+.footer-links a { color: rgba(255,255,255,.7); text-decoration: none; transition: color .2s; }
+.footer-links a:hover { color: white; }

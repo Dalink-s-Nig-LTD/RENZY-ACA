@@ -1,7 +1,7 @@
 import logoAsset from "../assets/renzy-logo.jpeg.asset.json";
 export const LOGO_URL = logoAsset.url;
 
-export const WHATSAPP_LINK = "https://wa.me/2348000000000";
+export const WHATSAPP_LINK = "https://wa.me/2349010692401";
 
 export const BENEFITS: [string, string][] = [
   ["Faster Delivery", "Lead teams that ship value in shorter cycles with predictable cadence."],
