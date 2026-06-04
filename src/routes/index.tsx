@@ -15,6 +15,7 @@ import { ModalOverlay } from "../components/ModalOverlay";
 import { SuccessConfirmation } from "../components/SuccessConfirmation";
 import { ContactInfo } from "../components/ContactInfo";
 import { AiAssistantIcon } from "../components/AiAssistantIcon";
+import { CookieConsent } from "../components/CookieConsent";
 
 export const Route = createFileRoute("/")({
   head: () => ({
