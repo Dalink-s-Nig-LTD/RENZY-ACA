@@ -447,3 +447,44 @@ body {
 .footer-links { display: flex; gap: .75rem; justify-content: center; align-items: center; font-size: .85rem; }
 .footer-links a { color: rgba(255,255,255,.7); text-decoration: none; transition: color .2s; }
 .footer-links a:hover { color: white; }
+
+/* ── Pricing promo ── */
+.pricing-regular {
+  display: block;
+  font-size: 1.1rem;
+  color: rgba(255,255,255,.55);
+  text-decoration: line-through;
+  font-weight: 500;
+  margin-bottom: .25rem;
+}
+.pricing-card:not(.popular) .pricing-regular { color: rgba(0,0,0,.4); }
+
+/* ── Cookie consent banner ── */
+.cookie-banner {
+  position: fixed;
+  left: 1rem;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 1000;
+  background: #0f0f12;
+  color: #fff;
+  border: 1px solid rgba(227, 27, 35, .35);
+  border-radius: 14px;
+  padding: 1rem 1.25rem;
+  box-shadow: 0 20px 50px -10px rgba(0,0,0,.6);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+.cookie-banner-text { font-size: .92rem; line-height: 1.5; flex: 1 1 320px; }
+.cookie-banner-link { color: #ff5a61; text-decoration: underline; }
+.cookie-banner-actions { display: flex; gap: .6rem; flex-shrink: 0; }
+.cookie-btn { padding: .55rem 1.1rem !important; font-size: .9rem !important; }
+@media (max-width: 520px) {
+  .cookie-banner { flex-direction: column; align-items: stretch; text-align: center; }
+  .cookie-banner-actions { justify-content: center; }
+}
