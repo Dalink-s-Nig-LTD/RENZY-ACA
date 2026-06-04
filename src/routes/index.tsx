@@ -294,7 +294,10 @@ function PricingSection({ onEnroll }: { onEnroll: () => void }) {
               {plan.popular && <div className="popular-badge">⭐ Most Popular</div>}
               <div className="pricing-header">
                 <h3 className="pricing-name">{plan.name}</h3>
-                <div className="pricing-price">{plan.price}</div>
+                <div className="pricing-price">
+                  {plan.regularPrice && <span className="pricing-regular">{plan.regularPrice}</span>}
+                  {plan.price}
+                </div>
                 <div className="pricing-period">{plan.period}</div>
                 <p className="pricing-desc">{plan.description}</p>
               </div>
