@@ -8,12 +8,8 @@ import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 export default defineConfig({
   tanstackStart: {
-    // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
-    // nitro/vite builds from this
-    // preset: "vercel" tells Nitro to output to .vercel/output (Vercel Build Output API v3)
-    server: {
-      entry: "server",
-      preset: "vercel",
-    },
+    // SPA mode: disables SSR so the app builds as a static site to dist/client/
+    // This is required when deploying outside Lovable (Nitro deploy plugin is skipped)
+    ssr: false,
   },
 });
