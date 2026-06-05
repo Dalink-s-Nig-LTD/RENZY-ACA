@@ -4,7 +4,13 @@ export const Route = createFileRoute("/privacy-policy")({
   head: () => ({
     meta: [
       { title: "Privacy Policy | Renzy Academy" },
-      { name: "description", content: "Privacy Policy for Renzy Academy." },
+      { name: "description", content: "How Renzy Academy collects, uses and protects your personal information." },
+      { property: "og:title", content: "Privacy Policy | Renzy Academy" },
+      { property: "og:description", content: "How Renzy Academy collects, uses and protects your personal information." },
+      { property: "og:url", content: "https://renzyacademytest.lovable.app/privacy-policy" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://renzyacademytest.lovable.app/privacy-policy" },
     ],
   }),
   component: PrivacyPolicyPage,

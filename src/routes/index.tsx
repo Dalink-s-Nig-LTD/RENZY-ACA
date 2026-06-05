@@ -21,10 +21,39 @@ import { sendFormToEmail, openExternal } from "../lib/email";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "PMI-ACP Certification Training | Renzy Academy" },
-      { name: "description", content: "Become PMI-ACP certified with Renzy Academy. Master Scrum, Kanban, Lean, XP and Hybrid Agile." },
-      { property: "og:title", content: "PMI-ACP Certification Training | Renzy Academy" },
-      { property: "og:description", content: "Become PMI-ACP certified with Renzy Academy." },
+      { title: "PMI-ACP Certification Training in Nigeria | Renzy Academy" },
+      { name: "description", content: "Become PMI-ACP certified with Renzy Academy. Live instructor-led training covering Scrum, Kanban, Lean, XP & Hybrid Agile. Mock exams, mentorship and career coaching." },
+      { property: "og:title", content: "PMI-ACP Certification Training in Nigeria | Renzy Academy" },
+      { property: "og:description", content: "Live instructor-led PMI-ACP exam prep. Mock exams, mentorship and career coaching from Renzy Academy." },
+      { property: "og:url", content: "https://renzyacademytest.lovable.app/" },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/1Kw5lcvqcNUulozuCC0E0ipnNat1/social-images/social-1780568502595-WhatsApp_Image_2026-05-31_at_21.25.42(3).webp" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/1Kw5lcvqcNUulozuCC0E0ipnNat1/social-images/social-1780568502595-WhatsApp_Image_2026-05-31_at_21.25.42(3).webp" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://renzyacademytest.lovable.app/" },
+    ],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Course",
+          name: "PMI-ACP® Exam Prep",
+          description: "Two-week intensive, instructor-led PMI-ACP certification training covering Scrum, Kanban, Lean, XP and Hybrid Agile.",
+          provider: {
+            "@type": "EducationalOrganization",
+            name: "Renzy Academy",
+            url: "https://renzyacademytest.lovable.app",
+          },
+          offers: {
+            "@type": "Offer",
+            price: "200000",
+            priceCurrency: "NGN",
+            url: "https://renzyacademytest.lovable.app/",
+            availability: "https://schema.org/InStock",
+          },
+        }),
+      },
     ],
   }),
   component: Index,

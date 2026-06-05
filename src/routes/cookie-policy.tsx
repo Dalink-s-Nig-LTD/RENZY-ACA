@@ -4,7 +4,13 @@ export const Route = createFileRoute("/cookie-policy")({
   head: () => ({
     meta: [
       { title: "Cookie Policy | Renzy Academy" },
-      { name: "description", content: "Cookie Policy for Renzy Academy." },
+      { name: "description", content: "How Renzy Academy uses cookies and similar technologies on our website." },
+      { property: "og:title", content: "Cookie Policy | Renzy Academy" },
+      { property: "og:description", content: "How Renzy Academy uses cookies and similar technologies." },
+      { property: "og:url", content: "https://renzyacademytest.lovable.app/cookie-policy" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://renzyacademytest.lovable.app/cookie-policy" },
     ],
   }),
   component: CookiePolicyPage,
