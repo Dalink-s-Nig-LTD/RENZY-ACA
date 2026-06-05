@@ -25,12 +25,12 @@ export const Route = createFileRoute("/")({
       { name: "description", content: "Become PMI-ACP certified with Renzy Academy. Live instructor-led training covering Scrum, Kanban, Lean, XP & Hybrid Agile. Mock exams, mentorship and career coaching." },
       { property: "og:title", content: "PMI-ACP Certification Training in Nigeria | Renzy Academy" },
       { property: "og:description", content: "Live instructor-led PMI-ACP exam prep. Mock exams, mentorship and career coaching from Renzy Academy." },
-      { property: "og:url", content: "https://renzyacademytest.lovable.app/" },
+      { property: "og:url", content: "https://www.renzyacademy.org/" },
       { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/1Kw5lcvqcNUulozuCC0E0ipnNat1/social-images/social-1780568502595-WhatsApp_Image_2026-05-31_at_21.25.42(3).webp" },
       { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/1Kw5lcvqcNUulozuCC0E0ipnNat1/social-images/social-1780568502595-WhatsApp_Image_2026-05-31_at_21.25.42(3).webp" },
     ],
     links: [
-      { rel: "canonical", href: "https://renzyacademytest.lovable.app/" },
+      { rel: "canonical", href: "https://www.renzyacademy.org/" },
     ],
     scripts: [
       {
@@ -43,13 +43,13 @@ export const Route = createFileRoute("/")({
           provider: {
             "@type": "EducationalOrganization",
             name: "Renzy Academy",
-            url: "https://renzyacademytest.lovable.app",
+            url: "https://www.renzyacademy.org",
           },
           offers: {
             "@type": "Offer",
             price: "200000",
             priceCurrency: "NGN",
-            url: "https://renzyacademytest.lovable.app/",
+            url: "https://www.renzyacademy.org/",
             availability: "https://schema.org/InStock",
           },
         }),
