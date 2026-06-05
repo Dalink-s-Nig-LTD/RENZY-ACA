@@ -101,7 +101,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "@context": "https://schema.org",
           "@type": "EducationalOrganization",
           name: "Renzy Academy",
-          url: "https://renzyacademytest.lovable.app",
+          url: "https://www.renzyacademy.org",
           email: "info@renzyacademy.org",
           telephone: "+234 901 069 2401",
           description: "Instructor-led PMI-ACP Agile certification training and exam prep.",
