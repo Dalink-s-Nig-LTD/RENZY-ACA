@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://renzyacademytest.lovable.app/sitemap.xml
