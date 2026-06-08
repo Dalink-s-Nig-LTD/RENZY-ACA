@@ -7,9 +7,12 @@
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 export default defineConfig({
+  // Force-enable the Nitro deploy plugin (skipped without Lovable context by default)
+  // and set the preset to "vercel" so Nitro outputs to .vercel/output (Build Output API v3)
+  nitro: { preset: "vercel" },
   tanstackStart: {
-    // SPA mode: disables SSR so the app builds as a static site to dist/client/
-    // This is required when deploying outside Lovable (Nitro deploy plugin is skipped)
-    ssr: false,
+    server: {
+      entry: "server",
+    },
   },
 });

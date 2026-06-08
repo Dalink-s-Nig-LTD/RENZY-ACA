@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
   Zap, RefreshCw, Users, Smile, Award, Globe,
   ChevronDown, Check, Calendar, Send, Menu, X,
@@ -439,7 +439,7 @@ function Index() {
     return () => obs.disconnect();
   }, []);
 
-  const openEnroll = () => setShowForm(true);
+  const openEnroll = useCallback(() => setShowForm(true), []);
 
   return (
     <div className="renzy">

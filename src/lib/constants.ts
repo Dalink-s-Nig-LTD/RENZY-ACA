@@ -1,5 +1,5 @@
-import logoAsset from "../assets/renzy-logo.jpeg.asset.json";
-export const LOGO_URL = logoAsset.url;
+// Logo served from the public folder — works in all environments (local, Vercel, etc.)
+export const LOGO_URL = "/renzy-logo.png";
 
 export const WHATSAPP_LINK = "https://wa.me/2349010692401";
 
@@ -60,5 +60,5 @@ export const PRICING_PLANS: PricingPlan[] = [
     cta: "Enroll Now", popular: true },
 ];
 
-// Next cohort: 30 days from now
-export const NEXT_COHORT_DATE = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+// Next cohort: fixed date — July 14, 2026
+export const NEXT_COHORT_DATE = new Date("2026-07-14T09:00:00+01:00");

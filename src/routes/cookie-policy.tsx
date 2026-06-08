@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { LOGO_URL } from "../lib/constants";
 
 export const Route = createFileRoute("/cookie-policy")({
   head: () => ({
@@ -22,6 +23,7 @@ function CookiePolicyPage() {
       <nav className="renzy-nav">
         <div className="nav-container">
           <Link to="/" className="logo-img">
+            <img src={LOGO_URL} alt="Renzy Academy" />
             <span className="logo-text">RENZY<span className="logo-dot">.</span>ACADEMY</span>
           </Link>
         </div>

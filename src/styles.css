@@ -452,12 +452,12 @@ body {
 .pricing-regular {
   display: block;
   font-size: 1.1rem;
-  color: rgba(255,255,255,.55);
+  color: var(--r-text-light);
   text-decoration: line-through;
   font-weight: 500;
   margin-bottom: .25rem;
+  opacity: 0.65;
 }
-.pricing-card:not(.popular) .pricing-regular { color: rgba(0,0,0,.4); }
 
 /* ── Cookie consent banner ── */
 .cookie-banner {

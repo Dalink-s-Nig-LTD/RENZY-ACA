@@ -10,13 +10,13 @@ export const FAQ_DATABASE: FAQ[] = [
     answer: "You need a secondary degree, 21 contact hours of Agile training, 12 months of general project experience within the last 5 years, and 8 months of Agile project experience within the last 3 years.",
     keywords: ["prerequisite", "requirement", "eligibility", "qualify", "qualification"] },
   { id: 2, question: "How long is the training?",
-    answer: "Our flagship program runs for 40 hours over 6 weeks of live sessions, plus on-demand recordings and self-study materials.",
+    answer: "Our PMI-ACP® Exam Prep program runs for 40 hours over two intensive weeks of live instructor-led sessions, plus on-demand recordings and self-study materials.",
     keywords: ["how long", "duration", "length", "weeks", "hours", "time"] },
   { id: 3, question: "What does the training cost?",
-    answer: "Self-Paced is $299, Live Cohort is $599, and Enterprise (team) pricing is custom. Flexible instalment plans are available — contact us for details.",
-    keywords: ["price", "cost", "fee", "how much", "pricing", "payment", "instalment"] },
+    answer: "Our PMI-ACP® Exam Prep is ₦200,000 (promo price, regular ₦350,000 — save ₦150,000). The promo ends June 20, 2026. Flexible instalment plans are available — contact us for details.",
+    keywords: ["price", "cost", "fee", "how much", "pricing", "payment", "instalment", "naira"] },
   { id: 4, question: "Do you offer exam application support?",
-    answer: "Yes. Live Cohort and Enterprise plans include personalized PMI-ACP application review and submission guidance.",
+    answer: "Yes. Our program includes personalized PMI-ACP application review and submission guidance to help you successfully register for the exam.",
     keywords: ["exam", "application", "apply", "register", "schedule"] },
   { id: 5, question: "Are the sessions recorded?",
     answer: "Every live session is recorded and available in your portal within 24 hours, so you never miss a class.",
@@ -27,6 +27,9 @@ export const FAQ_DATABASE: FAQ[] = [
   { id: 7, question: "Do you provide a certificate of completion?",
     answer: "Yes. You receive a Renzy Academy certificate showing 40 contact hours, which counts toward PMI-ACP eligibility.",
     keywords: ["certificate", "completion", "contact hours", "pdu"] },
+  { id: 8, question: "When is the next cohort?",
+    answer: "The next cohort starts July 14, 2026. Seats are limited — enroll today to secure your spot!",
+    keywords: ["next cohort", "start date", "when", "begin", "next batch", "july"] },
 ];
 
 export function findRelevantFAQ(query: string): FAQ | null {
