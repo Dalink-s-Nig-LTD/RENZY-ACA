@@ -55,9 +55,56 @@ type PricingPlan = {
 };
 
 export const PRICING_PLANS: PricingPlan[] = [
-  { name: "PMI-ACP® Exam Prep", price: "₦200,000", regularPrice: "₦350,000", period: "Save ₦150,000 — Promo ends June 20, 2026", description: "Two weeks intensive, instructor-led training.",
-    features: ["Live instructor-led sessions", "PMI-ACP® exam-focused preparation", "Mock exams & practice questions", "Mentorship & post-training support", "Study resources & downloadable guides", "Career-focused coaching"],
-    cta: "Enroll Now", popular: true },
+  {
+    name: "PMI-ACP® Exam Prep: Week-Day Training",
+    price: "₦200,000",
+    regularPrice: "₦350,000",
+    period: "Mon. - Fri., 9:00am - 2:00pm",
+    description: "Intensive weekday virtual training led by expert instructors.",
+    features: [
+      "Live instructor-led sessions (Mon - Fri)",
+      "PMI-ACP® exam-focused preparation",
+      "Mock exams & practice questions",
+      "Mentorship & post-training support",
+      "Study resources & downloadable guides",
+      "Career-focused coaching"
+    ],
+    cta: "Enroll Now",
+    popular: false
+  },
+  {
+    name: "PMI-ACP® Exam Prep: Weekend Plan",
+    price: "₦200,000",
+    regularPrice: "₦350,000",
+    period: "Six Saturdays, 9:00am - 2:00pm",
+    description: "Flexible weekend sessions ideal for working professionals.",
+    features: [
+      "Live instructor-led sessions (Saturdays)",
+      "PMI-ACP® exam-focused preparation",
+      "Mock exams & practice questions",
+      "Mentorship & post-training support",
+      "Study resources & downloadable guides",
+      "Career-focused coaching"
+    ],
+    cta: "Enroll Now",
+    popular: true
+  },
+  {
+    name: "General Agile Project Management for Professionals",
+    price: "₦100,000",
+    regularPrice: "₦180,000",
+    period: "Mode of Delivery: (Pre-recorded) Study at your own pace",
+    description: "Self-paced program for foundational & advanced Agile knowledge.",
+    features: [
+      "High-quality pre-recorded video lectures",
+      "General Agile project management principles",
+      "Lifetime access to study materials",
+      "Practice quizzes & study guides",
+      "Certificate of completion"
+    ],
+    cta: "Enroll Now",
+    popular: false
+  }
 ];
 
 // Next cohort: fixed date — July 14, 2026

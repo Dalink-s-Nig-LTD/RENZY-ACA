@@ -245,8 +245,8 @@ function LiveChatWidget({ onClose }: { onClose: () => void }) {
   );
 }
 
-function EnrollForm({ onClose }: { onClose: () => void }) {
-  const [form, setForm] = useState({ name: "", email: "", phone: "", role: "", message: "" });
+function EnrollForm({ onClose, defaultPlan = "" }: { onClose: () => void; defaultPlan?: string }) {
+  const [form, setForm] = useState({ name: "", email: "", phone: "", role: "", message: "", plan: defaultPlan });
   const [submitted, setSubmitted] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -259,6 +259,7 @@ function EnrollForm({ onClose }: { onClose: () => void }) {
       Email: form.email,
       Phone: form.phone,
       "Current Role": form.role || "—",
+      "Preferred Plan": form.plan || "—",
       Message: form.message || "—",
     });
     setSending(false);
@@ -293,6 +294,17 @@ function EnrollForm({ onClose }: { onClose: () => void }) {
             <div className="form-group">
               <label>Current Role</label>
               <input value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} placeholder="e.g. Project Manager" />
+            </div>
+            <div className="form-group">
+              <label>Preferred Plan *</label>
+              <select required value={form.plan} onChange={(e) => setForm({ ...form, plan: e.target.value })}>
+                <option value="">Select a plan</option>
+                {PRICING_PLANS.map((plan) => (
+                  <option key={plan.name} value={plan.name}>
+                    {plan.name} ({plan.price})
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="form-group">
               <label>Message (Optional)</label>
@@ -348,7 +360,7 @@ function CurriculumSection({ onEnroll }: { onEnroll: () => void }) {
   );
 }
 
-function PricingSection({ onEnroll }: { onEnroll: () => void }) {
+function PricingSection({ onEnroll }: { onEnroll: (planName?: string) => void }) {
   return (
     <section id="pricing" className="pricing-section">
       <div className="container">
@@ -371,7 +383,7 @@ function PricingSection({ onEnroll }: { onEnroll: () => void }) {
                   <li key={f}><Check className="pricing-check-icon" /> {f}</li>
                 ))}
               </ul>
-              <button onClick={onEnroll} className={plan.popular ? "btn-primary" : "btn-outline-primary"} style={{ width: "100%", marginTop: "auto" }}>
+              <button onClick={() => onEnroll(plan.name)} className={plan.popular ? "btn-primary" : "btn-outline-primary"} style={{ width: "100%", marginTop: "auto" }}>
                 {plan.cta}
               </button>
             </div>
@@ -426,7 +438,7 @@ function WhatsAppFAB() {
 const BENEFIT_ICONS = [Zap, RefreshCw, Users, Smile, Award, Globe];
 
 function Index() {
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] = useState<string | boolean>(false);
   const [showAI, setShowAI] = useState(false);
   const [showLiveChat, setShowLiveChat] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -439,7 +451,7 @@ function Index() {
     return () => obs.disconnect();
   }, []);
 
-  const openEnroll = useCallback(() => setShowForm(true), []);
+  const openEnroll = useCallback((planName?: string) => setShowForm(planName || true), []);
 
   return (
     <div className="renzy">
@@ -451,7 +463,7 @@ function Index() {
         </button>
       )}
 
-      {showForm && <EnrollForm onClose={() => setShowForm(false)} />}
+      {showForm && <EnrollForm defaultPlan={typeof showForm === "string" ? showForm : ""} onClose={() => setShowForm(false)} />}
       {showAI && <AIAssistant onClose={() => setShowAI(false)} onConnectToLiveChat={() => { setShowAI(false); setShowLiveChat(true); }} />}
       {showLiveChat && <LiveChatWidget onClose={() => setShowLiveChat(false)} />}
 
@@ -488,13 +500,13 @@ function Index() {
       <section className="hero">
         <div className="hero-container">
           <div>
-            <div className="hero-badge"><span className="dot"></span> PMI Authorized Training Partner</div>
+            <div className="hero-badge"><span className="dot"></span> Your Journey to Expertise Starts here</div>
             <h1>PMI-ACP Certification Is No Longer Optional. It Is a <span className="highlight">Global Career Advantage.</span></h1>
             <p className="hero-subtitle">Companies want professionals who can adapt quickly, manage change, lead agile teams, and deliver value faster in uncertain environments.</p>
             <div className="hero-stats" ref={statsRef}>
               <div className="stat"><span className="stat-number">{statsVisible ? <AnimatedCount target={21} suffix="%" /> : "0%"}</span><span className="stat-label">Higher Salary</span></div>
               <div className="stat"><span className="stat-number">{statsVisible ? <AnimatedCount target={6} /> : "0"}</span><span className="stat-label">Agile Frameworks</span></div>
-              <div className="stat"><span className="stat-number">{statsVisible ? <AnimatedCount target={500} suffix="+" /> : "0+"}</span><span className="stat-label">Graduates</span></div>
+              <div className="stat"><span className="stat-number">{statsVisible ? <AnimatedCount target={500} suffix="+" /> : "0+"}</span><span className="stat-label">Trained</span></div>
             </div>
             <div className="hero-cta-group">
               <button onClick={openEnroll} className="btn-primary">Start Your Journey →</button>
