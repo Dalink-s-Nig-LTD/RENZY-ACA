@@ -264,6 +264,23 @@ function EnrollForm({ onClose, defaultPlan = "" }: { onClose: () => void; defaul
     });
     setSending(false);
     if (res.ok) {
+      try {
+        const enrolls = JSON.parse(localStorage.getItem("renzy_enrolls") || "[]");
+        const newEnroll = {
+          id: Math.random().toString(36).substring(2, 9),
+          name: form.name,
+          email: form.email,
+          phone: form.phone,
+          role: form.role || "—",
+          plan: form.plan || "—",
+          message: form.message || "—",
+          date: new Date().toISOString(),
+          status: "Pending"
+        };
+        localStorage.setItem("renzy_enrolls", JSON.stringify([newEnroll, ...enrolls]));
+      } catch (e) {
+        console.warn("Storage write failed", e);
+      }
       setSubmitted(true);
       setTimeout(onClose, 3000);
     } else {
@@ -448,6 +465,22 @@ function Index() {
   useEffect(() => {
     const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) setStatsVisible(true); }, { threshold: 0.4 });
     if (statsRef.current) obs.observe(statsRef.current);
+
+    try {
+      const visits = JSON.parse(localStorage.getItem("renzy_visits") || "[]");
+      const newVisit = {
+        id: Math.random().toString(36).substring(2, 9),
+        timestamp: new Date().toISOString(),
+        path: window.location.pathname,
+        userAgent: window.navigator.userAgent,
+        referrer: document.referrer || "direct"
+      };
+      const updatedVisits = [newVisit, ...visits].slice(0, 1000);
+      localStorage.setItem("renzy_visits", JSON.stringify(updatedVisits));
+    } catch (e) {
+      console.warn("Storage write failed", e);
+    }
+
     return () => obs.disconnect();
   }, []);
 
