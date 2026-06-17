@@ -1,7 +1,7 @@
 // Lightweight form-to-email helper using FormSubmit.co (no backend setup needed).
 // First submission triggers a one-time confirmation email to the inbox below;
 // after confirming, all subsequent submissions are delivered directly.
-const RECIPIENT = "adexsammy@gmail.com";
+const RECIPIENT = "beckiok22@gmail.com";
 const ENDPOINT = `https://formsubmit.co/ajax/${RECIPIENT}`;
 
 export async function sendFormToEmail(
