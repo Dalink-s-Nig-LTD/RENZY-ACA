@@ -17,6 +17,8 @@ import { ContactInfo } from "../components/ContactInfo";
 import { AiAssistantIcon } from "../components/AiAssistantIcon";
 import { CookieConsent } from "../components/CookieConsent";
 import { sendFormToEmail, openExternal } from "../lib/email";
+import { useMutation } from "convex/react";
+import { api } from "../../convex/_generated/api";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -189,6 +191,7 @@ function AIAssistant({ onClose, onConnectToLiveChat }: { onClose: () => void; on
 }
 
 function LiveChatWidget({ onClose }: { onClose: () => void }) {
+  const createSubmission = useMutation(api.submissions.create);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
@@ -199,17 +202,25 @@ function LiveChatWidget({ onClose }: { onClose: () => void }) {
     e.preventDefault();
     setSending(true);
     setError(null);
-    const res = await sendFormToEmail("New Live Support Message — Renzy Academy", {
-      Name: name,
-      Email: email,
-      Message: message,
-    });
-    setSending(false);
-    if (res.ok) {
+    try {
+      await createSubmission({
+        name,
+        email,
+        message,
+        type: "live_chat",
+      });
+      await sendFormToEmail("New Live Support Message — Renzy Academy", {
+        Name: name,
+        Email: email,
+        Message: message,
+      });
       setSubmitted(true);
       setTimeout(onClose, 3000);
-    } else {
+    } catch (err) {
+      console.error(err);
       setError("Could not send right now. Please try again or email info@renzyacademy.org.");
+    } finally {
+      setSending(false);
     }
   };
   return (
@@ -246,6 +257,7 @@ function LiveChatWidget({ onClose }: { onClose: () => void }) {
 }
 
 function EnrollForm({ onClose, defaultPlan = "" }: { onClose: () => void; defaultPlan?: string }) {
+  const createSubmission = useMutation(api.submissions.create);
   const [form, setForm] = useState({ name: "", email: "", phone: "", role: "", message: "", plan: defaultPlan });
   const [submitted, setSubmitted] = useState(false);
   const [sending, setSending] = useState(false);
@@ -254,37 +266,31 @@ function EnrollForm({ onClose, defaultPlan = "" }: { onClose: () => void; defaul
     e.preventDefault();
     setSending(true);
     setError(null);
-    const res = await sendFormToEmail("New PMI-ACP Enrollment Application — Renzy Academy", {
-      "Full Name": form.name,
-      Email: form.email,
-      Phone: form.phone,
-      "Current Role": form.role || "—",
-      "Preferred Plan": form.plan || "—",
-      Message: form.message || "—",
-    });
-    setSending(false);
-    if (res.ok) {
-      try {
-        const enrolls = JSON.parse(localStorage.getItem("renzy_enrolls") || "[]");
-        const newEnroll = {
-          id: Math.random().toString(36).substring(2, 9),
-          name: form.name,
-          email: form.email,
-          phone: form.phone,
-          role: form.role || "—",
-          plan: form.plan || "—",
-          message: form.message || "—",
-          date: new Date().toISOString(),
-          status: "Pending"
-        };
-        localStorage.setItem("renzy_enrolls", JSON.stringify([newEnroll, ...enrolls]));
-      } catch (e) {
-        console.warn("Storage write failed", e);
-      }
+    try {
+      await createSubmission({
+        name: form.name,
+        email: form.email,
+        phone: form.phone,
+        role: form.role,
+        plan: form.plan,
+        message: form.message,
+        type: "enrollment",
+      });
+      await sendFormToEmail("New PMI-ACP Enrollment Application — Renzy Academy", {
+        "Full Name": form.name,
+        Email: form.email,
+        Phone: form.phone,
+        "Current Role": form.role || "—",
+        "Preferred Plan": form.plan || "—",
+        Message: form.message || "—",
+      });
       setSubmitted(true);
       setTimeout(onClose, 3000);
-    } else {
+    } catch (err) {
+      console.error(err);
       setError("Could not submit right now. Please try again or email info@renzyacademy.org.");
+    } finally {
+      setSending(false);
     }
   };
   return (

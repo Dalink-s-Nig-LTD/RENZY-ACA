@@ -2,14 +2,14 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { 
   Users, Eye, Percent, Calendar, Search, LogOut, CheckCircle, 
-  Clock, AlertCircle, XCircle, Download, Trash2, Edit2, ShieldAlert
+  Clock, AlertCircle, XCircle, Download, Trash2, Edit2, ShieldAlert, Mail
 } from "lucide-react";
 import { LOGO_URL } from "../lib/constants";
 import { openExternal } from "../lib/email";
-import { ConvexProvider, ConvexReactClient } from "convex/react";
-
-const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL || "https://placeholder-url.convex.cloud");
-
+import { useQuery, useMutation, useAction } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import { toast } from "sonner";
+import { ModalOverlay } from "../components/ModalOverlay";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -22,23 +22,22 @@ export const Route = createFileRoute("/admin")({
 });
 
 function AdminPageWrapper() {
-  return (
-    <ConvexProvider client={convex}>
-      <AdminPage />
-    </ConvexProvider>
-  );
+  return <AdminPage />;
 }
 
 interface Registration {
-  id: string;
+  _id: string;
+  _creationTime: number;
   name: string;
   email: string;
-  phone: string;
-  role: string;
-  plan: string;
-  message: string;
-  date: string;
-  status: "Pending" | "Contacted" | "Approved" | "Rejected";
+  phone?: string;
+  role?: string;
+  plan?: string;
+  message?: string;
+  type: string; // "enrollment" | "live_chat"
+  status: string; // "Pending" | "Contacted" | "Approved" | "Rejected"
+  repliedAt?: number;
+  replyMessage?: string;
 }
 
 interface PageVisit {
@@ -64,7 +63,6 @@ const generateMockVisits = (): PageVisit[] => {
 
   for (let i = 14; i >= 0; i--) {
     const day = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-    // 35 to 85 visits per day
     const visitCount = Math.floor(Math.random() * 50) + 35;
     for (let j = 0; j < visitCount; j++) {
       const hourOffset = Math.floor(Math.random() * 24);
@@ -84,83 +82,24 @@ const generateMockVisits = (): PageVisit[] => {
   return list.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 };
 
-const mockEnrollments: Registration[] = [
-  {
-    id: "r7x8a2b",
-    name: "Chinedu Okafor",
-    email: "chinedu.o@gmail.com",
-    phone: "+2348031234567",
-    role: "Senior Project Manager",
-    plan: "PMI-ACP® Exam Prep: Weekend Plan",
-    message: "Interested in payment plan option.",
-    date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-    status: "Approved"
-  },
-  {
-    id: "r2k9p1z",
-    name: "Olumide Bakare",
-    email: "olumide.bakare@yahoo.com",
-    phone: "+2348029876543",
-    role: "Scrum Master",
-    plan: "PMI-ACP® Exam Prep: Week-Day Training",
-    message: "Please confirm availability for the morning batch.",
-    date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    status: "Contacted"
-  },
-  {
-    id: "r9s1n2t",
-    name: "Chioma Nnaji",
-    email: "chioma.nnaji@fintech.ng",
-    phone: "+2348161112223",
-    role: "Product Manager",
-    plan: "PMI-ACP® Exam Prep: Weekend Plan",
-    message: "Does this include the PMI application support?",
-    date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-    status: "Pending"
-  },
-  {
-    id: "r5f6y7u",
-    name: "Fatima Yusuf",
-    email: "fatima.y@gmail.com",
-    phone: "+2347055556667",
-    role: "Business Analyst",
-    plan: "General Agile Project Management for Professionals",
-    message: "Looking forward to starting self-paced course.",
-    date: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
-    status: "Pending"
-  },
-  {
-    id: "r3e4n5w",
-    name: "Emeka Nwosu",
-    email: "emeka.n@telecom.com",
-    phone: "+2349012345678",
-    role: "Software Engineer",
-    plan: "PMI-ACP® Exam Prep: Week-Day Training",
-    message: "My team is also planning to join.",
-    date: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-    status: "Pending"
-  },
-  {
-    id: "r8t9a2d",
-    name: "Temitope Adebayo",
-    email: "temi.ade@gmail.com",
-    phone: "+2348098765432",
-    role: "Agile Coach",
-    plan: "General Agile Project Management for Professionals",
-    message: "Checking pre-recorded materials.",
-    date: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
-    status: "Pending"
-  }
-];
-
 function AdminPage() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [token, setToken] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("renzy_admin_token") || "";
+    }
+    return "";
+  });
+  
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState("");
   
+  // Checking session validity
+  const isSessionValid = useQuery(api.auth.validateSession, { token });
+  const isLoggedIn = isSessionValid?.valid ?? false;
+  const isCheckingSession = isSessionValid === undefined && token !== "";
+
   // Dashboard states
-  const [submissions, setSubmissions] = useState<Registration[]>([]);
   const [visits, setVisits] = useState<PageVisit[]>([]);
   
   // Filters and Views
@@ -169,92 +108,187 @@ function AdminPage() {
   const [planFilter, setPlanFilter] = useState("all");
   const [activeTab, setActiveTab] = useState<"submissions" | "visits" | "analytics">("submissions");
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editStatus, setEditStatus] = useState<Registration["status"]>("Pending");
+  const [editStatus, setEditStatus] = useState<string>("Pending");
 
-  // Check login state
+  // Reply modal states
+  const [replyingSubmission, setReplyingSubmission] = useState<Registration | null>(null);
+  const [replyMessageText, setReplyMessageText] = useState("");
+  const [isSendingReply, setIsSendingReply] = useState(false);
+  const [replyError, setReplyError] = useState<string | null>(null);
+
+  // Rate limiting states
+  const [failedAttempts, setFailedAttempts] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("login_failed_attempts");
+      return saved ? parseInt(saved, 10) : 0;
+    }
+    return 0;
+  });
+  const [lockoutTime, setLockoutTime] = useState<number | null>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("login_lockout_time");
+      return saved ? parseInt(saved, 10) : null;
+    }
+    return null;
+  });
+  const [timeLeft, setTimeLeft] = useState(0);
+
   useEffect(() => {
-    const session = localStorage.getItem("renzy_admin_session");
-    if (session === "true") {
-      setIsLoggedIn(true);
-      loadDashboardData();
+    if (lockoutTime) {
+      const interval = setInterval(() => {
+        const remaining = Math.max(0, Math.ceil((lockoutTime - Date.now()) / 1000));
+        setTimeLeft(remaining);
+        if (remaining === 0) {
+          setLockoutTime(null);
+          setFailedAttempts(0);
+          localStorage.removeItem("login_lockout_time");
+          localStorage.removeItem("login_failed_attempts");
+          clearInterval(interval);
+        }
+      }, 1000);
+      return () => clearInterval(interval);
     }
-  }, []);
+  }, [lockoutTime]);
 
-  const loadDashboardData = () => {
-    // Enrollments
-    let storedEnrolls = localStorage.getItem("renzy_enrolls");
-    if (!storedEnrolls) {
-      localStorage.setItem("renzy_enrolls", JSON.stringify(mockEnrollments));
-      storedEnrolls = JSON.stringify(mockEnrollments);
+  // Load submissions from Convex
+  const submissionsData = useQuery(api.submissions.list, { token });
+  const submissions: Registration[] = submissionsData || [];
+
+  // Load page visits locally
+  useEffect(() => {
+    if (isLoggedIn) {
+      let storedVisits = localStorage.getItem("renzy_visits");
+      if (!storedVisits || JSON.parse(storedVisits).length < 20) {
+        const generated = generateMockVisits();
+        const actual = storedVisits ? JSON.parse(storedVisits) : [];
+        const combined = [...actual, ...generated].slice(0, 1500);
+        localStorage.setItem("renzy_visits", JSON.stringify(combined));
+        storedVisits = JSON.stringify(combined);
+      }
+      setVisits(JSON.parse(storedVisits));
     }
-    setSubmissions(JSON.parse(storedEnrolls));
+  }, [isLoggedIn]);
 
-    // Page Visits
-    let storedVisits = localStorage.getItem("renzy_visits");
-    if (!storedVisits || JSON.parse(storedVisits).length < 20) {
-      const generated = generateMockVisits();
-      // Merge generated with any actual visits
-      const actual = storedVisits ? JSON.parse(storedVisits) : [];
-      const combined = [...actual, ...generated].slice(0, 1500);
-      localStorage.setItem("renzy_visits", JSON.stringify(combined));
-      storedVisits = JSON.stringify(combined);
-    }
-    setVisits(JSON.parse(storedVisits));
-  };
+  // Convex mutations & actions
+  const loginMutation = useMutation(api.auth.login);
+  const logoutMutation = useMutation(api.auth.logout);
+  const updateStatusMutation = useMutation(api.submissions.updateStatus);
+  const deleteMutation = useMutation(api.submissions.remove);
+  const sendReplyAction = useAction(api.emails.sendReply);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email.trim() === "info@renzyacademy.org" && password === "11223344") {
-      localStorage.setItem("renzy_admin_session", "true");
-      setIsLoggedIn(true);
-      setLoginError("");
-      loadDashboardData();
-    } else {
-      setLoginError("Invalid email or password");
+    if (lockoutTime && Date.now() < lockoutTime) {
+      return;
+    }
+
+    setLoginError("");
+    try {
+      const res = await loginMutation({ email, password });
+      if (res.success && res.token) {
+        localStorage.setItem("renzy_admin_token", res.token);
+        setToken(res.token);
+        setFailedAttempts(0);
+        localStorage.removeItem("login_failed_attempts");
+        localStorage.removeItem("login_lockout_time");
+      } else {
+        const newFailed = failedAttempts + 1;
+        setFailedAttempts(newFailed);
+        localStorage.setItem("login_failed_attempts", newFailed.toString());
+
+        if (newFailed >= 3) {
+          const lockUntil = Date.now() + 30000; // 30s lockout
+          setLockoutTime(lockUntil);
+          localStorage.setItem("login_lockout_time", lockUntil.toString());
+          setLoginError("Too many failed attempts. Try again in 30 seconds.");
+        } else {
+          setLoginError(res.error || "Invalid email or password");
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      setLoginError("An error occurred during login.");
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("renzy_admin_session");
-    setIsLoggedIn(false);
+  const handleLogout = async () => {
+    try {
+      await logoutMutation({ token });
+    } catch (e) {
+      console.warn("Logout failed", e);
+    }
+    localStorage.removeItem("renzy_admin_token");
+    setToken("");
     setEmail("");
     setPassword("");
   };
 
-  // Status updates
-  const updateStatus = (id: string, newStatus: Registration["status"]) => {
-    const updated = submissions.map((sub) => {
-      if (sub.id === id) {
-        return { ...sub, status: newStatus };
-      }
-      return sub;
-    });
-    setSubmissions(updated);
-    localStorage.setItem("renzy_enrolls", JSON.stringify(updated));
-    setEditingId(null);
-  };
-
-  // Delete submission
-  const deleteSubmission = (id: string) => {
-    if (confirm("Are you sure you want to delete this submission?")) {
-      const filtered = submissions.filter((sub) => sub.id !== id);
-      setSubmissions(filtered);
-      localStorage.setItem("renzy_enrolls", JSON.stringify(filtered));
+  const updateStatus = async (id: string, newStatus: string) => {
+    try {
+      // @ts-expect-error type matches
+      await updateStatusMutation({ id, status: newStatus, token });
+      toast.success("Status updated");
+      setEditingId(null);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to update status");
     }
   };
 
-  // Export submissions to CSV
+  const deleteSubmission = async (id: string) => {
+    if (confirm("Are you sure you want to delete this submission?")) {
+      try {
+        // @ts-expect-error type matches
+        await deleteMutation({ id, token });
+        toast.success("Submission deleted");
+      } catch (err) {
+        console.error(err);
+        toast.error("Failed to delete submission");
+      }
+    }
+  };
+
+  const handleSendReply = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!replyingSubmission) return;
+    setIsSendingReply(true);
+    setReplyError(null);
+    try {
+      // @ts-expect-error action call
+      const res = await sendReplyAction({
+        submissionId: replyingSubmission._id,
+        replyMessage: replyMessageText,
+        token,
+      });
+      if (res.success) {
+        toast.success("Reply email sent successfully!");
+        setReplyingSubmission(null);
+        setReplyMessageText("");
+      } else {
+        setReplyError(res.error || "Failed to send reply email");
+      }
+    } catch (err) {
+      console.error(err);
+      setReplyError("An error occurred. Make sure your RESEND_API_KEY is configured.");
+    } finally {
+      setIsSendingReply(false);
+    }
+  };
+
   const exportToCSV = () => {
-    const headers = ["Date", "Name", "Email", "Phone", "Current Role", "Course Plan", "Message", "Status"];
+    const headers = ["Date", "Type", "Name", "Email", "Phone", "Current Role", "Course Plan", "Message", "Status", "Replied At", "Reply Message"];
     const rows = submissions.map((s) => [
-      new Date(s.date).toLocaleDateString(),
+      new Date(s._creationTime).toLocaleDateString(),
+      s.type,
       s.name,
       s.email,
-      s.phone,
-      s.role,
-      s.plan,
-      s.message.replace(/,/g, " "),
-      s.status
+      s.phone || "",
+      s.role || "",
+      s.plan || "",
+      (s.message || "").replace(/,/g, " "),
+      s.status,
+      s.repliedAt ? new Date(s.repliedAt).toLocaleDateString() : "",
+      (s.replyMessage || "").replace(/,/g, " ")
     ]);
     
     const csvContent = "data:text/csv;charset=utf-8," 
@@ -263,7 +297,7 @@ function AdminPage() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `renzy_academy_enrollments_${new Date().toISOString().split("T")[0]}.csv`);
+    link.setAttribute("download", `renzy_academy_submissions_${new Date().toISOString().split("T")[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -274,23 +308,23 @@ function AdminPage() {
     const matchesSearch = 
       s.name.toLowerCase().includes(search.toLowerCase()) ||
       s.email.toLowerCase().includes(search.toLowerCase()) ||
-      s.phone.includes(search) ||
-      s.role.toLowerCase().includes(search.toLowerCase());
+      (s.phone && s.phone.includes(search)) ||
+      (s.role && s.role.toLowerCase().includes(search.toLowerCase()));
     
     const matchesStatus = statusFilter === "all" || s.status === statusFilter;
-    const matchesPlan = planFilter === "all" || s.plan.toLowerCase().includes(planFilter.toLowerCase());
+    
+    const matchesPlan = planFilter === "all" || (s.plan && s.plan.toLowerCase().includes(planFilter.toLowerCase()));
 
     return matchesSearch && matchesStatus && matchesPlan;
   });
 
-  // Calculate stats
   const totalVisitsCount = visits.length;
   const totalSubmissionsCount = submissions.length;
   const conversionRate = totalVisitsCount > 0 
     ? ((totalSubmissionsCount / totalVisitsCount) * 100).toFixed(1) 
     : "0.0";
 
-  // Group visits by day for SVG chart (past 7 days)
+  // Group visits and submissions by day for SVG chart
   const getChartData = () => {
     const days: string[] = [];
     const visitCounts: number[] = [];
@@ -302,16 +336,14 @@ function AdminPage() {
       const dateStr = d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
       days.push(dateStr);
 
-      // Filter visits for this day
       const dVisits = visits.filter(v => {
         const vDate = new Date(v.timestamp);
         return vDate.toDateString() === d.toDateString();
       });
       visitCounts.push(dVisits.length);
 
-      // Filter enrollments for this day
       const dEnrolls = submissions.filter(e => {
-        const eDate = new Date(e.date);
+        const eDate = new Date(e._creationTime);
         return eDate.toDateString() === d.toDateString();
       });
       enrollCounts.push(dEnrolls.length);
@@ -320,6 +352,15 @@ function AdminPage() {
   };
 
   const chartData = getChartData();
+  const maxVisits = Math.max(...chartData.visitCounts, 10);
+
+  if (isCheckingSession) {
+    return (
+      <div className="admin-login-layout" style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
+        <div style={{ color: "white", fontSize: "1.2rem" }}>Verifying session...</div>
+      </div>
+    );
+  }
 
   if (!isLoggedIn) {
     return (
@@ -352,8 +393,13 @@ function AdminPage() {
               />
             </div>
             {loginError && <div className="login-error"><ShieldAlert size={16} /> {loginError}</div>}
-            <button type="submit" className="btn-primary" style={{ width: "100%", marginTop: "1rem" }}>
-              Sign In
+            <button 
+              type="submit" 
+              className="btn-primary" 
+              style={{ width: "100%", marginTop: "1rem" }}
+              disabled={timeLeft > 0}
+            >
+              {timeLeft > 0 ? `Locked out (${timeLeft}s)` : "Sign In"}
             </button>
           </form>
           <div className="login-footer">
@@ -366,8 +412,7 @@ function AdminPage() {
     );
   }
 
-  // Helper component to render badge
-  const StatusBadge = ({ status }: { status: Registration["status"] }) => {
+  const StatusBadge = ({ status }: { status: string }) => {
     switch (status) {
       case "Approved":
         return <span className="badge badge-approved"><CheckCircle size={12} /> Approved</span>;
@@ -379,9 +424,6 @@ function AdminPage() {
         return <span className="badge badge-pending"><AlertCircle size={12} /> Pending</span>;
     }
   };
-
-  // Max value for scaling SVG chart
-  const maxVisits = Math.max(...chartData.visitCounts, 10);
 
   return (
     <div className="admin-dashboard-layout">
@@ -476,7 +518,7 @@ function AdminPage() {
         {activeTab === "submissions" && (
           <div className="dashboard-content-box">
             <div className="content-box-header">
-              <h2>Student Enrollment Submissions ({filteredSubmissions.length})</h2>
+              <h2>Student Enrollment & Support Submissions ({filteredSubmissions.length})</h2>
               
               {/* Search & Filters */}
               <div className="filters-bar">
@@ -521,6 +563,7 @@ function AdminPage() {
                 <thead>
                   <tr>
                     <th>Date</th>
+                    <th>Type</th>
                     <th>Student Info</th>
                     <th>Course Plan & Details</th>
                     <th>Status</th>
@@ -530,9 +573,9 @@ function AdminPage() {
                 <tbody>
                   {filteredSubmissions.length > 0 ? (
                     filteredSubmissions.map((s) => (
-                      <tr key={s.id}>
+                      <tr key={s._id}>
                         <td className="text-light text-nowrap">
-                          {new Date(s.date).toLocaleDateString(undefined, { 
+                          {new Date(s._creationTime).toLocaleDateString(undefined, { 
                             month: "short", 
                             day: "numeric", 
                             hour: "2-digit", 
@@ -540,26 +583,43 @@ function AdminPage() {
                           })}
                         </td>
                         <td>
+                          <span style={{ 
+                            padding: "2px 6px", 
+                            borderRadius: "4px", 
+                            fontSize: "11px", 
+                            fontWeight: "bold", 
+                            background: s.type === "enrollment" ? "rgba(227, 27, 35, 0.1)" : "rgba(59, 130, 246, 0.1)", 
+                            color: s.type === "enrollment" ? "#E31B23" : "#3b82f6" 
+                          }}>
+                            {s.type === "enrollment" ? "Enroll" : "Support"}
+                          </span>
+                        </td>
+                        <td>
                           <div className="student-name">{s.name}</div>
                           <div className="student-details text-light font-xs">
-                            {s.email} • {s.phone}
+                            {s.email} • {s.phone || "No Phone"}
                           </div>
                           {s.role && <div className="student-role text-light font-xs">Role: {s.role}</div>}
                         </td>
                         <td>
-                          <div className="plan-name">{s.plan}</div>
+                          <div className="plan-name">{s.plan || "Agile Support Inquiry"}</div>
                           {s.message && (
                             <div className="student-message text-light font-xs">
                               💬 {s.message}
                             </div>
                           )}
+                          {s.repliedAt && (
+                            <div className="text-blue font-xs" style={{ marginTop: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
+                              <Mail size={12} /> Replied on {new Date(s.repliedAt).toLocaleDateString()}
+                            </div>
+                          )}
                         </td>
                         <td>
-                          {editingId === s.id ? (
+                          {editingId === s._id ? (
                             <div className="flex-center gap-xs">
                               <select 
                                 value={editStatus} 
-                                onChange={(e) => setEditStatus(e.target.value as Registration["status"])}
+                                onChange={(e) => setEditStatus(e.target.value)}
                                 className="edit-status-select"
                               >
                                 <option value="Pending">Pending</option>
@@ -568,7 +628,7 @@ function AdminPage() {
                                 <option value="Rejected">Rejected</option>
                               </select>
                               <button 
-                                onClick={() => updateStatus(s.id, editStatus)}
+                                onClick={() => updateStatus(s._id, editStatus)}
                                 className="btn-icon-check"
                                 title="Save status"
                               >
@@ -579,7 +639,7 @@ function AdminPage() {
                             <div className="flex-center gap-xs">
                               <StatusBadge status={s.status} />
                               <button 
-                                onClick={() => { setEditingId(s.id); setEditStatus(s.status); }}
+                                onClick={() => { setEditingId(s._id); setEditStatus(s.status); }}
                                 className="btn-action-edit"
                                 title="Edit Status"
                               >
@@ -589,19 +649,39 @@ function AdminPage() {
                           )}
                         </td>
                         <td style={{ textAlign: "right" }}>
-                          <button 
-                            onClick={() => deleteSubmission(s.id)}
-                            className="btn-action-delete"
-                            title="Delete Submission"
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                          <div style={{ display: "inline-flex", gap: "8px" }}>
+                            <button 
+                              onClick={() => { setReplyingSubmission(s); setReplyMessageText(s.replyMessage || ""); }}
+                              style={{ 
+                                display: "flex", 
+                                alignItems: "center", 
+                                justifyContent: "center", 
+                                width: "28px", 
+                                height: "28px", 
+                                border: "none", 
+                                borderRadius: "4px", 
+                                background: "rgba(59, 130, 246, 0.1)", 
+                                color: "#3b82f6", 
+                                cursor: "pointer" 
+                              }}
+                              title={s.repliedAt ? "View/Edit Email Reply" : "Send Email Reply"}
+                            >
+                              <Mail size={14} />
+                            </button>
+                            <button 
+                              onClick={() => deleteSubmission(s._id)}
+                              className="btn-action-delete"
+                              title="Delete Submission"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={5} className="empty-table-state">
+                      <td colSpan={6} className="empty-table-state">
                         No submissions found matching criteria.
                       </td>
                     </tr>
@@ -682,7 +762,6 @@ function AdminPage() {
               </p>
             </div>
 
-            {/* Custom Responsive SVG Chart */}
             <div className="analytics-chart-container">
               <div className="chart-legend">
                 <div className="legend-item"><span className="legend-dot bg-blue"></span> Visits</div>
@@ -691,7 +770,6 @@ function AdminPage() {
 
               <div className="chart-svg-wrapper">
                 <svg viewBox="0 0 700 300" className="chart-svg" preserveAspectRatio="none">
-                  {/* Grid Lines */}
                   {[0, 0.25, 0.5, 0.75, 1].map((ratio, idx) => (
                     <line 
                       key={idx}
@@ -705,7 +783,6 @@ function AdminPage() {
                     />
                   ))}
 
-                  {/* Vertical labels guide lines */}
                   {chartData.days.map((_, idx) => {
                     const x = 50 + idx * 100;
                     return (
@@ -721,11 +798,9 @@ function AdminPage() {
                     );
                   })}
 
-                  {/* Visits Line (Blue Line Chart) */}
                   <path
                     d={chartData.visitCounts.map((val, idx) => {
                       const x = 50 + idx * 100;
-                      // scale val to fits inside y: 30 to 230 (height 200)
                       const y = 230 - (val / maxVisits) * 200;
                       return `${idx === 0 ? "M" : "L"} ${x} ${y}`;
                     }).join(" ")}
@@ -735,7 +810,6 @@ function AdminPage() {
                     strokeLinecap="round"
                   />
 
-                  {/* Visits Area Gradient */}
                   <path
                     d={
                       chartData.visitCounts.map((val, idx) => {
@@ -748,10 +822,9 @@ function AdminPage() {
                     opacity="0.1"
                   />
 
-                  {/* Enrollments Bar Chart (Red Bars) */}
                   {chartData.enrollCounts.map((val, idx) => {
                     const x = 50 + idx * 100;
-                    const barHeight = val * 25; // 25px height per enrollment
+                    const barHeight = val * 25;
                     const y = 230 - barHeight;
                     return (
                       <rect
@@ -767,7 +840,6 @@ function AdminPage() {
                     );
                   })}
 
-                  {/* Data Point Circles for Visits */}
                   {chartData.visitCounts.map((val, idx) => {
                     const x = 50 + idx * 100;
                     const y = 230 - (val / maxVisits) * 200;
@@ -788,7 +860,6 @@ function AdminPage() {
                     );
                   })}
 
-                  {/* Data Labels for Enrollments */}
                   {chartData.enrollCounts.map((val, idx) => {
                     if (val === 0) return null;
                     const x = 50 + idx * 100;
@@ -808,7 +879,6 @@ function AdminPage() {
                     );
                   })}
 
-                  {/* Definitions for gradients */}
                   <defs>
                     <linearGradient id="blue-gradient" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor="#3b82f6" />
@@ -818,7 +888,6 @@ function AdminPage() {
                 </svg>
               </div>
 
-              {/* X Axis Labels */}
               <div className="chart-xaxis">
                 {chartData.days.map((day, idx) => (
                   <div key={idx} className="xaxis-label">{day}</div>
@@ -826,7 +895,6 @@ function AdminPage() {
               </div>
             </div>
 
-            {/* Device breakdown and Referrer cards */}
             <div className="analytics-details-grid">
               <div className="analytics-details-card">
                 <h3>Traffic Sources</h3>
@@ -857,7 +925,7 @@ function AdminPage() {
                     <span className="details-name">Weekend PMI-ACP® Prep</span>
                     <span className="details-val">
                       {submissions.length > 0 
-                        ? `${((submissions.filter(s => s.plan.includes("Weekend")).length / submissions.length) * 100).toFixed(0)}%`
+                        ? `${((submissions.filter(s => s.plan && s.plan.includes("Weekend")).length / submissions.length) * 100).toFixed(0)}%`
                         : "0%"}
                     </span>
                   </div>
@@ -865,7 +933,7 @@ function AdminPage() {
                     <span className="details-name">Week-Day PMI-ACP® Prep</span>
                     <span className="details-val">
                       {submissions.length > 0 
-                        ? `${((submissions.filter(s => s.plan.includes("Week-Day")).length / submissions.length) * 100).toFixed(0)}%`
+                        ? `${((submissions.filter(s => s.plan && s.plan.includes("Week-Day")).length / submissions.length) * 100).toFixed(0)}%`
                         : "0%"}
                     </span>
                   </div>
@@ -873,7 +941,7 @@ function AdminPage() {
                     <span className="details-name">General Agile PM</span>
                     <span className="details-val">
                       {submissions.length > 0 
-                        ? `${((submissions.filter(s => s.plan.includes("General Agile")).length / submissions.length) * 100).toFixed(0)}%`
+                        ? `${((submissions.filter(s => s.plan && s.plan.includes("General")).length / submissions.length) * 100).toFixed(0)}%`
                         : "0%"}
                     </span>
                   </div>
@@ -883,6 +951,84 @@ function AdminPage() {
           </div>
         )}
       </main>
+
+      {/* Reply Modal */}
+      {replyingSubmission && (
+        <ModalOverlay onClose={() => setReplyingSubmission(null)}>
+          <div className="reply-modal" style={{ padding: "0.5rem" }}>
+            <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", marginBottom: "0.5rem" }}>Send Reply Email</h3>
+            <p style={{ color: "var(--muted-foreground)", marginBottom: "1rem", fontSize: "0.9rem" }}>
+              To: <strong>{replyingSubmission.name}</strong> ({replyingSubmission.email})
+            </p>
+            
+            {replyingSubmission.repliedAt && (
+              <div style={{ 
+                background: "rgba(59, 130, 246, 0.08)", 
+                borderLeft: "3px solid #3b82f6", 
+                padding: "10px", 
+                borderRadius: "4px", 
+                marginBottom: "1rem", 
+                fontSize: "0.85rem" 
+              }}>
+                <div style={{ fontWeight: "bold", color: "#3b82f6", marginBottom: "4px" }}>
+                  Previous reply sent on {new Date(replyingSubmission.repliedAt).toLocaleString()}:
+                </div>
+                <div style={{ whiteSpace: "pre-wrap", color: "var(--foreground)" }}>
+                  {replyingSubmission.replyMessage}
+                </div>
+              </div>
+            )}
+
+            <form onSubmit={handleSendReply}>
+              <div className="form-group" style={{ marginBottom: "1rem" }}>
+                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "0.5rem" }}>Message Body *</label>
+                <textarea
+                  required
+                  rows={6}
+                  value={replyMessageText}
+                  onChange={(e) => setReplyMessageText(e.target.value)}
+                  placeholder="Type your response here..."
+                  style={{ 
+                    width: "100%", 
+                    padding: "8px", 
+                    borderRadius: "4px", 
+                    border: "1px solid var(--border)", 
+                    background: "var(--background)", 
+                    color: "var(--foreground)",
+                    fontSize: "0.9rem",
+                    lineHeight: "1.5"
+                  }}
+                />
+              </div>
+              
+              {replyError && (
+                <div className="login-error" style={{ marginBottom: "1rem" }}>
+                  <ShieldAlert size={16} /> {replyError}
+                </div>
+              )}
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                <button
+                  type="button"
+                  onClick={() => setReplyingSubmission(null)}
+                  className="btn-secondary"
+                  style={{ padding: "8px 16px" }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSendingReply}
+                  className="btn-primary"
+                  style={{ padding: "8px 20px" }}
+                >
+                  {isSendingReply ? "Sending..." : "Send Reply"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </ModalOverlay>
+      )}
     </div>
   );
 }

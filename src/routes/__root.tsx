@@ -8,9 +8,12 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
+import { ConvexProvider, ConvexReactClient } from "convex/react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+
+const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL || "https://placeholder-url.convex.cloud");
 
 function NotFoundComponent() {
   return (
@@ -150,13 +153,18 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+import { Toaster } from "../components/ui/sonner";
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   return (
-    <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
-    </QueryClientProvider>
+    <ConvexProvider client={convex}>
+      <QueryClientProvider client={queryClient}>
+        {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+        <Outlet />
+        <Toaster />
+      </QueryClientProvider>
+    </ConvexProvider>
   );
 }
