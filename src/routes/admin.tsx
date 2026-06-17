@@ -301,7 +301,7 @@ function AdminPage() {
             <h2 className="text-2xl font-bold text-white mb-1">Admin Portal</h2>
             <p className="text-red-100 text-sm">Access enrollment records & analytics</p>
           </div>
-          <form onSubmit={handleLogin} className="p-8" autoComplete="off">
+          <form onSubmit={handleLogin} className="p-8">
             <div className="mb-4">
               <label className="block text-sm font-semibold text-gray-700 mb-1">Admin Email</label>
               <input 
@@ -309,8 +309,7 @@ function AdminPage() {
                 required 
                 value={email} 
                 onChange={(e) => setEmail(e.target.value)} 
-                placeholder="Enter your email" 
-                autoComplete="off"
+                placeholder="Enter your email"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
               />
             </div>
@@ -323,7 +322,7 @@ function AdminPage() {
                   value={password} 
                   onChange={(e) => setPassword(e.target.value)} 
                   placeholder="Enter your password" 
-                  autoComplete="new-password"
+                  autoComplete="current-password"
                   className="w-full px-4 py-2 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
                 />
                 <button
