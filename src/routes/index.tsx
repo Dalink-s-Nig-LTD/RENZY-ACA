@@ -9,13 +9,16 @@ import {
   LOGO_URL, WHATSAPP_LINK, BENEFITS, INDUSTRIES, AUDIENCE,
   TESTIMONIALS, CURRICULUM, PRICING_PLANS, NEXT_COHORT_DATE,
 } from "../lib/constants";
-import { FAQ_DATABASE, findRelevantFAQ } from "../lib/faq";
+import { FAQ_DATABASE } from "../lib/faq";
 import { SectionHeader } from "../components/SectionHeader";
 import { ModalOverlay } from "../components/ModalOverlay";
 import { SuccessConfirmation } from "../components/SuccessConfirmation";
 import { ContactInfo } from "../components/ContactInfo";
 import { AiAssistantIcon } from "../components/AiAssistantIcon";
 import { CookieConsent } from "../components/CookieConsent";
+import { CountdownBanner } from "../components/home/CountdownBanner";
+import { AIAssistant } from "../components/home/AIAssistant";
+import { Navbar } from "../components/Navbar";
 import { sendFormToEmail, openExternal } from "../lib/email";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -74,41 +77,7 @@ function ScrollProgressBar() {
   return <div className="scroll-progress" style={{ width: `${width}%` }} />;
 }
 
-function CountdownBanner() {
-  const [t, setT] = useState({ days: 0, hours: 0, mins: 0, secs: 0 });
-  useEffect(() => {
-    const calc = () => {
-      const diff = NEXT_COHORT_DATE.getTime() - Date.now();
-      if (diff <= 0) return setT({ days: 0, hours: 0, mins: 0, secs: 0 });
-      setT({
-        days: Math.floor(diff / 86400000),
-        hours: Math.floor((diff % 86400000) / 3600000),
-        mins: Math.floor((diff % 3600000) / 60000),
-        secs: Math.floor((diff % 60000) / 1000),
-      });
-    };
-    calc();
-    const id = setInterval(calc, 1000);
-    return () => clearInterval(id);
-  }, []);
-  const units: [string, number][] = [["Days", t.days], ["Hours", t.hours], ["Mins", t.mins], ["Secs", t.secs]];
-  return (
-    <div className="countdown-banner">
-      <div className="countdown-label">
-        <Calendar size={16} /> Next cohort starts in:
-      </div>
-      <div className="countdown-units">
-        {units.map(([label, val]) => (
-          <div key={label} className="countdown-unit">
-            <span className="countdown-value">{String(val).padStart(2, "0")}</span>
-            <span className="countdown-label-sm">{label}</span>
-          </div>
-        ))}
-      </div>
-      <div className="countdown-urgency">🔥 Limited spots — enroll today</div>
-    </div>
-  );
-}
+
 
 function AnimatedCount({ target, suffix = "" }: { target: number; suffix?: string }) {
   const [count, setCount] = useState(0);
@@ -127,68 +96,7 @@ function AnimatedCount({ target, suffix = "" }: { target: number; suffix?: strin
   return <>{count}{suffix}</>;
 }
 
-interface ChatMessage {
-  id: string; text: string; sender: "user" | "assistant"; timestamp: Date; faqId?: number;
-}
 
-function AIAssistant({ onClose, onConnectToLiveChat }: { onClose: () => void; onConnectToLiveChat: () => void }) {
-  const [messages, setMessages] = useState<ChatMessage[]>([{
-    id: "1",
-    text: "Hi! I'm Renzy's AI Assistant. I can answer common questions about PMI-ACP training, pricing, prerequisites, and more. What would you like to know?",
-    sender: "assistant", timestamp: new Date(),
-  }]);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const endRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
-
-  const send = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim()) return;
-    const userMsg: ChatMessage = { id: Date.now().toString(), text: input, sender: "user", timestamp: new Date() };
-    setMessages((p) => [...p, userMsg]);
-    const q = input;
-    setInput("");
-    setLoading(true);
-    setTimeout(() => {
-      const faq = findRelevantFAQ(q);
-      const reply: ChatMessage = faq
-        ? { id: (Date.now() + 1).toString(), text: faq.answer, sender: "assistant", timestamp: new Date(), faqId: faq.id }
-        : { id: (Date.now() + 1).toString(), text: "I'm not sure about that. Would you like to connect with our live support team?", sender: "assistant", timestamp: new Date() };
-      setMessages((p) => [...p, reply]);
-      setLoading(false);
-    }, 500);
-  };
-
-  return (
-    <ModalOverlay onClose={onClose}>
-      <div className="ai-assistant">
-        <div className="ai-header">
-          <AiAssistantIcon />
-          <div>
-            <h3>Renzy AI Assistant</h3>
-            <p>Instant answers to your questions</p>
-          </div>
-        </div>
-        <div className="ai-messages">
-          {messages.map((m) => (
-            <div key={m.id} className={`ai-msg ai-msg-${m.sender}`}>{m.text}</div>
-          ))}
-          {loading && <div className="ai-msg ai-msg-assistant ai-typing"><span></span><span></span><span></span></div>}
-          <div ref={endRef} />
-        </div>
-        <form onSubmit={send} className="ai-form">
-          <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask me anything..." disabled={loading} className="ai-input" />
-          <button type="submit" className="btn-primary ai-send"><Send size={16} /></button>
-        </form>
-        <button onClick={onConnectToLiveChat} className="ai-live-link">
-          Connect to Live Support →
-        </button>
-      </div>
-    </ModalOverlay>
-  );
-}
 
 function LiveChatWidget({ onClose }: { onClose: () => void }) {
   const createSubmission = useMutation(api.submissions.create);
@@ -464,7 +372,6 @@ function Index() {
   const [showForm, setShowForm] = useState<string | boolean>(false);
   const [showAI, setShowAI] = useState(false);
   const [showLiveChat, setShowLiveChat] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
   const statsRef = useRef<HTMLDivElement>(null);
   const [statsVisible, setStatsVisible] = useState(false);
 
@@ -506,33 +413,7 @@ function Index() {
       {showAI && <AIAssistant onClose={() => setShowAI(false)} onConnectToLiveChat={() => { setShowAI(false); setShowLiveChat(true); }} />}
       {showLiveChat && <LiveChatWidget onClose={() => setShowLiveChat(false)} />}
 
-      <nav className="renzy-nav">
-        <div className="nav-container">
-          <a href="/" className="logo-img">
-            <img src={LOGO_URL} alt="Renzy Academy" />
-            <span className="logo-text">RENZY<span className="logo-dot">.</span>ACADEMY</span>
-          </a>
-          <div className="nav-links">
-            <a href="#why" className="nav-link">Why PMI-ACP</a>
-            <a href="#curriculum" className="nav-link">Curriculum</a>
-            <a href="#pricing" className="nav-link">Pricing</a>
-            <a href="#faq" className="nav-link">FAQ</a>
-          </div>
-          <div className="nav-right">
-            <button onClick={openEnroll} className="nav-cta">Enroll Now</button>
-            <button className="hamburger-btn" onClick={() => setMobileOpen(!mobileOpen)} aria-label="Toggle menu" aria-expanded={mobileOpen}>
-              {mobileOpen ? <X /> : <Menu />}
-            </button>
-          </div>
-        </div>
-        <div className={`mobile-menu ${mobileOpen ? "open" : ""}`}>
-          <a href="#why" className="mobile-link" onClick={() => setMobileOpen(false)}>Why PMI-ACP</a>
-          <a href="#curriculum" className="mobile-link" onClick={() => setMobileOpen(false)}>Curriculum</a>
-          <a href="#pricing" className="mobile-link" onClick={() => setMobileOpen(false)}>Pricing</a>
-          <a href="#faq" className="mobile-link" onClick={() => setMobileOpen(false)}>FAQ</a>
-          <button onClick={() => { openEnroll(); setMobileOpen(false); }} className="btn-primary mobile-enroll-btn">Enroll Now</button>
-        </div>
-      </nav>
+      <Navbar onEnroll={openEnroll} />
 
       <CountdownBanner />
 
