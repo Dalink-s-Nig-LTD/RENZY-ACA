@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { 
-  Users, Eye, Percent, Calendar, Search, LogOut, CheckCircle, 
-  Clock, AlertCircle, XCircle, Download, Trash2, Edit2, ShieldAlert, Mail
+  Users, Percent, Calendar, Search, LogOut, CheckCircle, 
+  Clock, AlertCircle, XCircle, Download, Trash2, Edit2, ShieldAlert, Mail, Menu, X
 } from "lucide-react";
 import { LOGO_URL } from "../lib/constants";
 import { openExternal } from "../lib/email";
@@ -40,49 +40,6 @@ interface Registration {
   replyMessage?: string;
 }
 
-interface PageVisit {
-  id: string;
-  timestamp: string;
-  path: string;
-  userAgent: string;
-  referrer: string;
-}
-
-// Generate pre-populated visits for the past 14 days for a beautiful graph
-const generateMockVisits = (): PageVisit[] => {
-  const list: PageVisit[] = [];
-  const now = new Date();
-  const devices = [
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1",
-    "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-  ];
-  const paths = ["/", "/privacy-policy", "/cookie-policy"];
-  const referrers = ["direct", "https://wa.me/", "https://google.com", "https://linkedin.com"];
-
-  // Generate for past 30 days to support 30-day "all-time" view
-  for (let i = 30; i >= 0; i--) {
-    const day = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-    const visitCount = Math.floor(Math.random() * 50) + 35;
-    for (let j = 0; j < visitCount; j++) {
-      const hourOffset = Math.floor(Math.random() * 24);
-      const minOffset = Math.floor(Math.random() * 60);
-      const visitTime = new Date(day);
-      visitTime.setHours(hourOffset, minOffset);
-
-      list.push({
-        id: Math.random().toString(36).substring(2, 9),
-        timestamp: visitTime.toISOString(),
-        path: paths[Math.random() < 0.85 ? 0 : Math.floor(Math.random() * paths.length)],
-        userAgent: devices[Math.floor(Math.random() * devices.length)],
-        referrer: referrers[Math.floor(Math.random() * referrers.length)]
-      });
-    }
-  }
-  return list.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-};
-
 function AdminPage() {
   const [token, setToken] = useState(() => {
     if (typeof window !== "undefined") {
@@ -100,17 +57,14 @@ function AdminPage() {
   const isLoggedIn = isSessionValid?.valid ?? false;
   const isCheckingSession = isSessionValid === undefined && token !== "";
 
-  // Dashboard states
-  const [visits, setVisits] = useState<PageVisit[]>([]);
-  const [timeRange, setTimeRange] = useState<"7days" | "alltime">("7days");
-  
   // Filters and Views
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [planFilter, setPlanFilter] = useState("all");
-  const [activeTab, setActiveTab] = useState<"submissions" | "visits" | "analytics">("submissions");
+  const [activeTab, setActiveTab] = useState<"submissions" | "analytics">("submissions");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editStatus, setEditStatus] = useState<string>("Pending");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Reply modal states
   const [replyingSubmission, setReplyingSubmission] = useState<Registration | null>(null);
@@ -156,27 +110,11 @@ function AdminPage() {
   const submissionsData = useQuery(api.submissions.list, { token });
   const submissions: Registration[] = submissionsData || [];
 
-  // Load page visits locally
-  useEffect(() => {
-    if (isLoggedIn) {
-      let storedVisits = localStorage.getItem("renzy_visits");
-      if (!storedVisits || JSON.parse(storedVisits).length < 100) {
-        const generated = generateMockVisits();
-        const actual = storedVisits ? JSON.parse(storedVisits) : [];
-        const combined = [...actual, ...generated].slice(0, 3000);
-        localStorage.setItem("renzy_visits", JSON.stringify(combined));
-        storedVisits = JSON.stringify(combined);
-      }
-      setVisits(JSON.parse(storedVisits));
-    }
-  }, [isLoggedIn]);
-
   // Convex mutations & actions
   const loginMutation = useMutation(api.auth.login);
   const logoutMutation = useMutation(api.auth.logout);
   const updateStatusMutation = useMutation(api.submissions.updateStatus);
   const deleteMutation = useMutation(api.submissions.remove);
-  const clearAllSubmissions = useMutation(api.submissions.clearAll);
   const sendReplyAction = useAction(api.emails.sendReply);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -251,25 +189,6 @@ function AdminPage() {
     }
   };
 
-  const handleResetData = async () => {
-    if (confirm("⚠️ WARNING: This will permanently delete all submissions from the database and regenerate mock traffic logs. This cannot be undone! Are you absolutely sure?")) {
-      try {
-        await clearAllSubmissions({ token });
-        
-        // Reset local page visits
-        localStorage.removeItem("renzy_visits");
-        const generated = generateMockVisits();
-        localStorage.setItem("renzy_visits", JSON.stringify(generated));
-        setVisits(generated);
-
-        toast.success("Database and traffic logs successfully reset");
-      } catch (err) {
-        console.error(err);
-        toast.error("Failed to reset dashboard data");
-      }
-    }
-  };
-
   const handleSendReply = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!replyingSubmission) return;
@@ -336,44 +255,21 @@ function AdminPage() {
     const matchesStatus = statusFilter === "all" || s.status === statusFilter;
     const matchesPlan = planFilter === "all" || (s.plan && s.plan.toLowerCase().includes(planFilter.toLowerCase()));
 
-    // Time-range filter
-    if (timeRange === "7days") {
-      const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-      if (s._creationTime < sevenDaysAgo) return false;
-    }
-
     return matchesSearch && matchesStatus && matchesPlan;
   });
 
-  // Calculate filtered stats
-  const rangeVisits = timeRange === "7days"
-    ? visits.filter(v => new Date(v.timestamp).getTime() >= Date.now() - 7 * 24 * 60 * 60 * 1000)
-    : visits;
-
-  const totalVisitsCount = rangeVisits.length;
   const totalSubmissionsCount = filteredSubmissions.length;
-  const conversionRate = totalVisitsCount > 0 
-    ? ((totalSubmissionsCount / totalVisitsCount) * 100).toFixed(1) 
-    : "0.0";
 
-  // Group visits and submissions by day for SVG chart
+  // Group submissions by day for SVG chart (Last 30 days)
   const getChartData = () => {
     const days: string[] = [];
-    const visitCounts: number[] = [];
     const enrollCounts: number[] = [];
     const now = new Date();
-    const rangeLength = timeRange === "7days" ? 7 : 30;
 
-    for (let i = rangeLength - 1; i >= 0; i--) {
+    for (let i = 29; i >= 0; i--) {
       const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
       const dateStr = d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
       days.push(dateStr);
-
-      const dVisits = visits.filter(v => {
-        const vDate = new Date(v.timestamp);
-        return vDate.toDateString() === d.toDateString();
-      });
-      visitCounts.push(dVisits.length);
 
       const dEnrolls = submissions.filter(e => {
         const eDate = new Date(e._creationTime);
@@ -381,63 +277,68 @@ function AdminPage() {
       });
       enrollCounts.push(dEnrolls.length);
     }
-    return { days, visitCounts, enrollCounts };
+    return { days, enrollCounts };
   };
 
   const chartData = getChartData();
-  const maxVisits = Math.max(...chartData.visitCounts, 10);
+  const maxEnrolls = Math.max(...chartData.enrollCounts, 10);
 
   if (isCheckingSession) {
     return (
-      <div className="admin-login-layout" style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
-        <div style={{ color: "white", fontSize: "1.2rem" }}>Verifying session...</div>
+      <div className="flex justify-center items-center h-screen bg-gray-50">
+        <div className="text-gray-600 text-lg font-medium">Verifying session...</div>
       </div>
     );
   }
 
   if (!isLoggedIn) {
     return (
-      <div className="admin-login-layout">
-        <div className="login-box">
-          <div className="login-header">
-            <img src={LOGO_URL} alt="Renzy Academy" className="login-logo" />
-            <h2>Admin Portal</h2>
-            <p>Access enrollment records & page analytics</p>
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
+        <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden">
+          <div className="bg-red-600 p-8 text-center">
+            <img src={LOGO_URL} alt="Renzy Academy" className="h-16 w-auto mx-auto mb-4 bg-white rounded-full p-2" />
+            <h2 className="text-2xl font-bold text-white mb-1">Admin Portal</h2>
+            <p className="text-red-100 text-sm">Access enrollment records & analytics</p>
           </div>
-          <form onSubmit={handleLogin} className="login-form">
-            <div className="form-group">
-              <label>Admin Email</label>
+          <form onSubmit={handleLogin} className="p-8">
+            <div className="mb-4">
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Admin Email</label>
               <input 
                 type="email" 
                 required 
                 value={email} 
                 onChange={(e) => setEmail(e.target.value)} 
                 placeholder="info@renzyacademy.org" 
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
               />
             </div>
-            <div className="form-group">
-              <label>Password</label>
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Password</label>
               <input 
                 type="password" 
                 required 
                 value={password} 
                 onChange={(e) => setPassword(e.target.value)} 
                 placeholder="••••••••" 
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
               />
             </div>
-            {loginError && <div className="login-error"><ShieldAlert size={16} /> {loginError}</div>}
+            {loginError && (
+              <div className="flex items-center gap-2 bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm">
+                <ShieldAlert size={16} /> {loginError}
+              </div>
+            )}
             <button 
               type="submit" 
-              className="btn-primary" 
-              style={{ width: "100%", marginTop: "1rem" }}
+              className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
               disabled={timeLeft > 0}
             >
               {timeLeft > 0 ? `Locked out (${timeLeft}s)` : "Sign In"}
             </button>
           </form>
-          <div className="login-footer">
-            <button onClick={() => openExternal("https://www.renzyacademy.org")} className="back-link">
-              ← Go back to Website
+          <div className="p-4 border-t border-gray-100 text-center bg-gray-50">
+            <button onClick={() => openExternal("https://www.renzyacademy.org")} className="text-sm text-gray-500 hover:text-red-600 transition-colors">
+              &larr; Go back to Website
             </button>
           </div>
         </div>
@@ -448,170 +349,124 @@ function AdminPage() {
   const StatusBadge = ({ status }: { status: string }) => {
     switch (status) {
       case "Approved":
-        return <span className="badge badge-approved"><CheckCircle size={12} /> Approved</span>;
+        return <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-md"><CheckCircle size={12} /> Approved</span>;
       case "Contacted":
-        return <span className="badge badge-contacted"><Clock size={12} /> Contacted</span>;
+        return <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded-md"><Clock size={12} /> Contacted</span>;
       case "Rejected":
-        return <span className="badge badge-rejected"><XCircle size={12} /> Rejected</span>;
+        return <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 text-xs font-bold rounded-md"><XCircle size={12} /> Rejected</span>;
       default:
-        return <span className="badge badge-pending"><AlertCircle size={12} /> Pending</span>;
+        return <span className="inline-flex items-center gap-1 px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-bold rounded-md"><AlertCircle size={12} /> Pending</span>;
     }
   };
 
   return (
-    <div className="admin-dashboard-layout">
+    <div className="flex flex-col md:flex-row min-h-screen bg-gray-50 font-sans text-gray-900">
+      
+      {/* Mobile Header (visible only on md and below) */}
+      <div className="md:hidden flex items-center justify-between bg-white border-b border-gray-200 p-4 sticky top-0 z-20">
+        <div className="flex items-center gap-3">
+          <img src={LOGO_URL} alt="Renzy" className="h-8 w-8" />
+          <span className="font-bold text-gray-900">Admin</span>
+        </div>
+        <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 text-gray-600 bg-gray-100 rounded-md">
+          {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+        </button>
+      </div>
+
       {/* Sidebar navigation */}
-      <aside className="admin-sidebar">
-        <div className="sidebar-brand">
-          <img src={LOGO_URL} alt="Renzy Academy" className="sidebar-logo" />
+      <aside className={`${mobileMenuOpen ? "block" : "hidden"} md:flex flex-col w-full md:w-64 bg-white border-b md:border-b-0 md:border-r border-gray-200 sticky top-[65px] md:top-0 md:h-screen z-10`}>
+        <div className="hidden md:flex items-center gap-3 p-6 border-b border-gray-100">
+          <img src={LOGO_URL} alt="Renzy Academy" className="h-10 w-10 bg-gray-50 p-1 rounded" />
           <div>
-            <div className="brand-title">RENZY ACADEMY</div>
-            <div className="brand-subtitle font-xs">Portal Admin</div>
+            <div className="font-bold text-gray-900 leading-tight">RENZY ACADEMY</div>
+            <div className="text-xs text-gray-500 font-medium">Portal Admin</div>
           </div>
         </div>
         
-        <nav className="sidebar-nav">
+        <nav className="flex-1 overflow-y-auto py-4 px-3 flex flex-col gap-1">
           <button 
-            className={`sidebar-link ${activeTab === "submissions" ? "active" : ""}`} 
-            onClick={() => setActiveTab("submissions")}
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors ${activeTab === "submissions" ? "bg-red-50 text-red-600" : "text-gray-600 hover:bg-gray-100"}`} 
+            onClick={() => { setActiveTab("submissions"); setMobileMenuOpen(false); }}
           >
             <Users size={18} /> Submissions
           </button>
           <button 
-            className={`sidebar-link ${activeTab === "visits" ? "active" : ""}`} 
-            onClick={() => setActiveTab("visits")}
-          >
-            <Eye size={18} /> Page Visits
-          </button>
-          <button 
-            className={`sidebar-link ${activeTab === "analytics" ? "active" : ""}`} 
-            onClick={() => setActiveTab("analytics")}
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors ${activeTab === "analytics" ? "bg-red-50 text-red-600" : "text-gray-600 hover:bg-gray-100"}`} 
+            onClick={() => { setActiveTab("analytics"); setMobileMenuOpen(false); }}
           >
             <Percent size={18} /> Analytics & Graphs
           </button>
         </nav>
 
-        <div className="sidebar-footer">
-          <button onClick={handleLogout} className="btn-logout">
+        <div className="p-4 border-t border-gray-100">
+          <button onClick={handleLogout} className="flex items-center gap-2 w-full px-3 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
             <LogOut size={16} /> Log Out
           </button>
         </div>
       </aside>
 
       {/* Main dashboard content */}
-      <main className="admin-main">
-        <header className="admin-header">
-          <div className="header-info">
-            <h1>Admin Dashboard</h1>
-            <p>Monitor applications, cohorts and web traffic</p>
+      <main className="flex-1 p-4 md:p-8 w-full max-w-full overflow-x-hidden">
+        <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-1">Admin Dashboard</h1>
+            <p className="text-gray-500 text-sm">Monitor applications and enrollment metrics</p>
           </div>
-          <div className="header-actions" style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-            {/* Time range selector */}
-            <div className="flex-center gap-xs" style={{ background: "rgba(255, 255, 255, 0.05)", padding: "4px", borderRadius: "6px", display: "inline-flex" }}>
-              <button 
-                onClick={() => setTimeRange("7days")} 
-                style={{ 
-                  padding: "6px 12px", 
-                  fontSize: "0.75rem", 
-                  fontWeight: "bold", 
-                  border: "none", 
-                  borderRadius: "4px", 
-                  background: timeRange === "7days" ? "var(--r-red)" : "transparent", 
-                  color: "white", 
-                  cursor: "pointer",
-                  transition: "all 0.2s"
-                }}
-              >
-                7 Days
-              </button>
-              <button 
-                onClick={() => setTimeRange("alltime")} 
-                style={{ 
-                  padding: "6px 12px", 
-                  fontSize: "0.75rem", 
-                  fontWeight: "bold", 
-                  border: "none", 
-                  borderRadius: "4px", 
-                  background: timeRange === "alltime" ? "var(--r-red)" : "transparent", 
-                  color: "white", 
-                  cursor: "pointer",
-                  transition: "all 0.2s"
-                }}
-              >
-                All-Time
-              </button>
-            </div>
-
-            <button 
-              onClick={handleResetData} 
-              className="btn-secondary flex-center gap-xs" 
-              style={{ color: "var(--r-red)", borderColor: "rgba(227, 27, 35, 0.2)", height: "34px", padding: "0 12px" }}
-            >
-              Reset Data
-            </button>
-            <button onClick={exportToCSV} className="btn-secondary flex-center gap-xs" style={{ height: "34px", padding: "0 12px" }}>
+          <div className="flex items-center gap-3">
+            <button onClick={exportToCSV} className="flex items-center justify-center gap-2 bg-white border border-gray-300 text-gray-700 font-semibold py-2 px-4 rounded-lg shadow-sm hover:bg-gray-50 transition-colors text-sm">
               <Download size={16} /> Export CSV
-            </button>
-            <button onClick={handleLogout} className="mobile-logout btn-logout">
-              <LogOut size={16} />
             </button>
           </div>
         </header>
 
         {/* Stats Grid */}
-        <section className="stats-grid">
-          <div className="stat-card">
-            <div className="stat-card-icon bg-red-light"><Users className="text-red" /></div>
-            <div className="stat-card-content">
-              <div className="stat-card-label">Total Submissions</div>
-              <div className="stat-card-value">{totalSubmissionsCount}</div>
+        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm flex items-center gap-4">
+            <div className="flex items-center justify-center h-12 w-12 rounded-full bg-red-100 text-red-600"><Users size={24} /></div>
+            <div>
+              <div className="text-sm font-semibold text-gray-500">Total Submissions</div>
+              <div className="text-2xl font-bold text-gray-900">{totalSubmissionsCount}</div>
             </div>
           </div>
-          <div className="stat-card">
-            <div className="stat-card-icon bg-blue-light"><Eye className="text-blue" /></div>
-            <div className="stat-card-content">
-              <div className="stat-card-label">Page Visits</div>
-              <div className="stat-card-value">{totalVisitsCount}</div>
+          <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm flex items-center gap-4">
+            <div className="flex items-center justify-center h-12 w-12 rounded-full bg-green-100 text-green-600"><Percent size={24} /></div>
+            <div>
+              <div className="text-sm font-semibold text-gray-500">Total Approved</div>
+              <div className="text-2xl font-bold text-gray-900">{submissions.filter(s => s.status === "Approved").length}</div>
             </div>
           </div>
-          <div className="stat-card">
-            <div className="stat-card-icon bg-green-light"><Percent className="text-green" /></div>
-            <div className="stat-card-content">
-              <div className="stat-card-label">Conversion Rate</div>
-              <div className="stat-card-value">{conversionRate}%</div>
-            </div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-card-icon bg-orange-light"><Calendar className="text-orange" /></div>
-            <div className="stat-card-content">
-              <div className="stat-card-label">Cohort Start Date</div>
-              <div className="stat-card-value">July 14, 2026</div>
+          <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm flex items-center gap-4">
+            <div className="flex items-center justify-center h-12 w-12 rounded-full bg-orange-100 text-orange-600"><Calendar size={24} /></div>
+            <div>
+              <div className="text-sm font-semibold text-gray-500">Cohort Start Date</div>
+              <div className="text-2xl font-bold text-gray-900">July 14, 2026</div>
             </div>
           </div>
         </section>
 
         {/* Tab 1: Submissions */}
         {activeTab === "submissions" && (
-          <div className="dashboard-content-box">
-            <div className="content-box-header">
-              <h2>Student Enrollment & Support Submissions ({filteredSubmissions.length})</h2>
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-8">
+            <div className="p-5 md:p-6 border-b border-gray-200">
+              <h2 className="text-lg font-bold text-gray-900 mb-4">Student Enrollment & Support Submissions ({filteredSubmissions.length})</h2>
               
               {/* Search & Filters */}
-              <div className="filters-bar">
-                <div className="search-wrapper">
-                  <Search size={16} className="search-icon" />
+              <div className="flex flex-col md:flex-row gap-3">
+                <div className="relative flex-1">
+                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                   <input 
                     type="text" 
                     placeholder="Search name, email, phone..." 
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-red-500 outline-none"
                   />
                 </div>
                 
                 <select 
                   value={statusFilter} 
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="filter-select"
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-red-500 outline-none"
                 >
                   <option value="all">All Statuses</option>
                   <option value="Pending">Pending</option>
@@ -623,7 +478,7 @@ function AdminPage() {
                 <select 
                   value={planFilter} 
                   onChange={(e) => setPlanFilter(e.target.value)}
-                  className="filter-select"
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-red-500 outline-none"
                 >
                   <option value="all">All Plans</option>
                   <option value="Week-Day">Week-Day Training</option>
@@ -634,23 +489,23 @@ function AdminPage() {
             </div>
 
             {/* Submissions Table / Mobile list */}
-            <div className="table-responsive">
-              <table className="admin-table">
+            <div className="overflow-x-auto w-full">
+              <table className="w-full text-left border-collapse min-w-[800px]">
                 <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Type</th>
-                    <th>Student Info</th>
-                    <th>Course Plan & Details</th>
-                    <th>Status</th>
-                    <th style={{ textAlign: "right" }}>Actions</th>
+                  <tr className="bg-gray-50 border-b border-gray-200">
+                    <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
+                    <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Type</th>
+                    <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Student Info</th>
+                    <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Course Plan & Details</th>
+                    <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-gray-200">
                   {filteredSubmissions.length > 0 ? (
                     filteredSubmissions.map((s) => (
-                      <tr key={s._id}>
-                        <td className="text-light text-nowrap">
+                      <tr key={s._id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
                           {new Date(s._creationTime).toLocaleDateString(undefined, { 
                             month: "short", 
                             day: "numeric", 
@@ -658,45 +513,38 @@ function AdminPage() {
                             minute: "2-digit" 
                           })}
                         </td>
-                        <td>
-                          <span style={{ 
-                            padding: "2px 6px", 
-                            borderRadius: "4px", 
-                            fontSize: "11px", 
-                            fontWeight: "bold", 
-                            background: s.type === "enrollment" ? "rgba(227, 27, 35, 0.1)" : "rgba(59, 130, 246, 0.1)", 
-                            color: s.type === "enrollment" ? "#E31B23" : "#3b82f6" 
-                          }}>
+                        <td className="px-6 py-4">
+                          <span className={`inline-flex px-2 py-1 rounded text-[11px] font-bold ${s.type === "enrollment" ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-600"}`}>
                             {s.type === "enrollment" ? "Enroll" : "Support"}
                           </span>
                         </td>
-                        <td>
-                          <div className="student-name">{s.name}</div>
-                          <div className="student-details text-light font-xs">
+                        <td className="px-6 py-4">
+                          <div className="text-sm font-bold text-gray-900">{s.name}</div>
+                          <div className="text-xs text-gray-500 mt-1">
                             {s.email} • {s.phone || "No Phone"}
                           </div>
-                          {s.role && <div className="student-role text-light font-xs">Role: {s.role}</div>}
+                          {s.role && <div className="text-xs text-gray-500 mt-1">Role: {s.role}</div>}
                         </td>
-                        <td>
-                          <div className="plan-name">{s.plan || "Agile Support Inquiry"}</div>
+                        <td className="px-6 py-4">
+                          <div className="text-sm font-semibold text-gray-800">{s.plan || "Agile Support Inquiry"}</div>
                           {s.message && (
-                            <div className="student-message text-light font-xs">
+                            <div className="text-xs text-gray-600 mt-1.5 p-2 bg-gray-50 rounded border border-gray-100">
                               💬 {s.message}
                             </div>
                           )}
                           {s.repliedAt && (
-                            <div className="text-blue font-xs" style={{ marginTop: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
+                            <div className="text-xs text-blue-600 mt-2 flex items-center gap-1">
                               <Mail size={12} /> Replied on {new Date(s.repliedAt).toLocaleDateString()}
                             </div>
                           )}
                         </td>
-                        <td>
+                        <td className="px-6 py-4">
                           {editingId === s._id ? (
-                            <div className="flex-center gap-xs">
+                            <div className="flex items-center gap-2">
                               <select 
                                 value={editStatus} 
                                 onChange={(e) => setEditStatus(e.target.value)}
-                                className="edit-status-select"
+                                className="text-xs border border-gray-300 rounded px-2 py-1 outline-none"
                               >
                                 <option value="Pending">Pending</option>
                                 <option value="Contacted">Contacted</option>
@@ -705,51 +553,40 @@ function AdminPage() {
                               </select>
                               <button 
                                 onClick={() => updateStatus(s._id, editStatus)}
-                                className="btn-icon-check"
+                                className="p-1 bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors"
                                 title="Save status"
                               >
-                                ✓
+                                <CheckCircle size={14} />
                               </button>
                             </div>
                           ) : (
-                            <div className="flex-center gap-xs">
+                            <div className="flex items-center gap-2">
                               <StatusBadge status={s.status} />
                               <button 
                                 onClick={() => { setEditingId(s._id); setEditStatus(s.status); }}
-                                className="btn-action-edit"
+                                className="p-1 text-gray-400 hover:text-gray-700 transition-colors"
                                 title="Edit Status"
                               >
-                                <Edit2 size={12} />
+                                <Edit2 size={14} />
                               </button>
                             </div>
                           )}
                         </td>
-                        <td style={{ textAlign: "right" }}>
-                          <div style={{ display: "inline-flex", gap: "8px" }}>
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
                             <button 
                               onClick={() => { setReplyingSubmission(s); setReplyMessageText(s.replyMessage || ""); }}
-                              style={{ 
-                                display: "flex", 
-                                alignItems: "center", 
-                                justifyContent: "center", 
-                                width: "28px", 
-                                height: "28px", 
-                                border: "none", 
-                                borderRadius: "4px", 
-                                background: "rgba(59, 130, 246, 0.1)", 
-                                color: "#3b82f6", 
-                                cursor: "pointer" 
-                              }}
+                              className="p-1.5 rounded bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
                               title={s.repliedAt ? "View/Edit Email Reply" : "Send Email Reply"}
                             >
-                              <Mail size={14} />
+                              <Mail size={16} />
                             </button>
                             <button 
                               onClick={() => deleteSubmission(s._id)}
-                              className="btn-action-delete"
+                              className="p-1.5 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
                               title="Delete Submission"
                             >
-                              <Trash2 size={14} />
+                              <Trash2 size={16} />
                             </button>
                           </div>
                         </td>
@@ -757,68 +594,8 @@ function AdminPage() {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={6} className="empty-table-state">
+                      <td colSpan={6} className="px-6 py-12 text-center text-gray-500 bg-gray-50/50">
                         No submissions found matching criteria.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* Tab 2: Page Visits */}
-        {activeTab === "visits" && (
-          <div className="dashboard-content-box">
-            <div className="content-box-header">
-              <h2>Recent Page Visits Log ({visits.length})</h2>
-              <p className="text-light" style={{ fontSize: ".85rem", marginTop: ".25rem" }}>
-                Tracks live navigation metrics across course pages.
-              </p>
-            </div>
-
-            <div className="table-responsive">
-              <table className="admin-table">
-                <thead>
-                  <tr>
-                    <th>Time</th>
-                    <th>Page Path</th>
-                    <th>Referral Source</th>
-                    <th>Device/User Agent Details</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rangeVisits.length > 0 ? (
-                    rangeVisits.slice(0, 100).map((v) => (
-                      <tr key={v.id}>
-                        <td className="text-light text-nowrap">
-                          {new Date(v.timestamp).toLocaleDateString(undefined, { 
-                            month: "short", 
-                            day: "numeric",
-                            year: "numeric",
-                            hour: "2-digit", 
-                            minute: "2-digit",
-                            second: "2-digit"
-                          })}
-                        </td>
-                        <td>
-                          <span className="badge-path">{v.path}</span>
-                        </td>
-                        <td>
-                          <span className="text-light font-xs">{v.referrer}</span>
-                        </td>
-                        <td>
-                          <div className="ua-detail text-light font-xs" title={v.userAgent}>
-                            {v.userAgent.length > 80 ? v.userAgent.substring(0, 80) + "..." : v.userAgent}
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={4} className="empty-table-state">
-                        No page visits tracked yet.
                       </td>
                     </tr>
                   )}
@@ -830,22 +607,23 @@ function AdminPage() {
 
         {/* Tab 3: Analytics Graphs */}
         {activeTab === "analytics" && (
-          <div className="dashboard-content-box">
-            <div className="content-box-header">
-              <h2>Web Traffic & Registration Conversions</h2>
-              <p className="text-light" style={{ fontSize: ".85rem", marginTop: ".25rem" }}>
-                Traffic charts and daily signups trend for the past {timeRange === "7days" ? 7 : 30} days.
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-8">
+            <div className="p-5 md:p-6 border-b border-gray-200">
+              <h2 className="text-lg font-bold text-gray-900 mb-1">Registration Conversions</h2>
+              <p className="text-sm text-gray-500">
+                Daily signups trend for the past 30 days.
               </p>
             </div>
 
-            <div className="analytics-chart-container">
-              <div className="chart-legend">
-                <div className="legend-item"><span className="legend-dot bg-blue"></span> Visits</div>
-                <div className="legend-item"><span className="legend-dot bg-red"></span> Submissions</div>
+            <div className="p-6">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                  <span className="w-3 h-3 rounded-full bg-red-600 inline-block"></span> Submissions
+                </div>
               </div>
 
-              <div className="chart-svg-wrapper">
-                <svg viewBox="0 0 700 300" className="chart-svg" preserveAspectRatio="none">
+              <div className="w-full overflow-x-auto pb-4">
+                <svg viewBox="0 0 700 300" className="w-full min-w-[600px] h-[300px]" preserveAspectRatio="none">
                   {[0, 0.25, 0.5, 0.75, 1].map((ratio, idx) => (
                     <line 
                       key={idx}
@@ -853,7 +631,7 @@ function AdminPage() {
                       y1={30 + ratio * 200} 
                       x2="660" 
                       y2={30 + ratio * 200} 
-                      stroke="#edf2f7" 
+                      stroke="#f1f5f9" 
                       strokeWidth="1"
                       strokeDasharray="4,4"
                     />
@@ -861,7 +639,7 @@ function AdminPage() {
 
                   {chartData.days.map((_, idx) => {
                     const x = 50 + idx * (600 / (chartData.days.length - 1 || 1));
-                    const shouldShowLine = timeRange === "7days" || idx % 5 === 0 || idx === chartData.days.length - 1;
+                    const shouldShowLine = idx % 5 === 0 || idx === chartData.days.length - 1;
                     if (!shouldShowLine) return null;
                     return (
                       <line
@@ -876,80 +654,34 @@ function AdminPage() {
                     );
                   })}
 
-                  <path
-                    d={chartData.visitCounts.map((val, idx) => {
-                      const x = 50 + idx * (600 / (chartData.days.length - 1 || 1));
-                      const y = 230 - (val / maxVisits) * 200;
-                      return `${idx === 0 ? "M" : "L"} ${x} ${y}`;
-                    }).join(" ")}
-                    fill="none"
-                    stroke="#3b82f6"
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                  />
-
-                  <path
-                    d={
-                      chartData.visitCounts.map((val, idx) => {
-                        const x = 50 + idx * (600 / (chartData.days.length - 1 || 1));
-                        const y = 230 - (val / maxVisits) * 200;
-                        return `${idx === 0 ? "M" : "L"} ${x} ${y}`;
-                      }).join(" ") + ` L 650 230 L 50 230 Z`
-                    }
-                    fill="url(#blue-gradient)"
-                    opacity="0.1"
-                  />
-
                   {chartData.enrollCounts.map((val, idx) => {
                     const x = 50 + idx * (600 / (chartData.days.length - 1 || 1));
-                    const barHeight = val * 25;
+                    const barHeight = val * (maxEnrolls > 0 ? (200 / maxEnrolls) : 0);
                     const y = 230 - barHeight;
                     return (
                       <rect
                         key={idx}
-                        x={x - (timeRange === "7days" ? 10 : 4)}
+                        x={x - 4}
                         y={y}
-                        width={timeRange === "7days" ? "20" : "8"}
+                        width="8"
                         height={barHeight}
-                        fill="var(--r-red)"
+                        fill="#dc2626"
                         rx="2"
                         opacity="0.85"
                       />
                     );
                   })}
 
-                  {chartData.visitCounts.map((val, idx) => {
-                    const x = 50 + idx * (600 / (chartData.days.length - 1 || 1));
-                    const y = 230 - (val / maxVisits) * 200;
-                    const shouldShowCircle = timeRange === "7days" || idx % 5 === 0 || idx === chartData.days.length - 1;
-                    if (!shouldShowCircle) return null;
-                    return (
-                      <g key={idx}>
-                        <circle cx={x} cy={y} r="4" fill="#3b82f6" stroke="white" strokeWidth="1.5" />
-                        <text 
-                          x={x} 
-                          y={y - 8} 
-                          fill="#1a202c" 
-                          fontSize="9" 
-                          fontWeight="bold" 
-                          textAnchor="middle"
-                        >
-                          {val}
-                        </text>
-                      </g>
-                    );
-                  })}
-
                   {chartData.enrollCounts.map((val, idx) => {
                     if (val === 0) return null;
                     const x = 50 + idx * (600 / (chartData.days.length - 1 || 1));
-                    const y = 230 - val * 25;
+                    const y = 230 - val * (maxEnrolls > 0 ? (200 / maxEnrolls) : 0);
                     return (
                       <text
                         key={idx}
                         x={x}
                         y={y - 6}
-                        fill="var(--r-red)"
+                        fill="#dc2626"
                         fontSize="9"
                         fontWeight="bold"
                         textAnchor="middle"
@@ -958,22 +690,15 @@ function AdminPage() {
                       </text>
                     );
                   })}
-
-                  <defs>
-                    <linearGradient id="blue-gradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#3b82f6" />
-                      <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
-                    </linearGradient>
-                  </defs>
                 </svg>
               </div>
 
-              <div className="chart-xaxis" style={{ display: "flex", justifyContent: "space-between", padding: "0 40px" }}>
+              <div className="flex justify-between px-10 border-t border-gray-100 pt-3">
                 {chartData.days.map((day, idx) => {
-                  const shouldShowLabel = timeRange === "7days" || idx % 5 === 0 || idx === chartData.days.length - 1;
+                  const shouldShowLabel = idx % 5 === 0 || idx === chartData.days.length - 1;
                   if (!shouldShowLabel) return null;
                   return (
-                    <div key={idx} className="xaxis-label" style={{ fontSize: "10px", color: "var(--muted-foreground)" }}>
+                    <div key={idx} className="text-[10px] text-gray-500 font-medium">
                       {day}
                     </div>
                   );
@@ -981,51 +706,29 @@ function AdminPage() {
               </div>
             </div>
 
-            <div className="analytics-details-grid">
-              <div className="analytics-details-card">
-                <h3>Traffic Sources</h3>
-                <div className="details-list">
-                  <div className="details-item">
-                    <span className="details-name">Direct / Typing</span>
-                    <span className="details-val">45%</span>
-                  </div>
-                  <div className="details-item">
-                    <span className="details-name">WhatsApp Links</span>
-                    <span className="details-val">32%</span>
-                  </div>
-                  <div className="details-item">
-                    <span className="details-name">Google Search</span>
-                    <span className="details-val">15%</span>
-                  </div>
-                  <div className="details-item">
-                    <span className="details-name">LinkedIn Ads</span>
-                    <span className="details-val">8%</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="analytics-details-card">
-                <h3>Preferred Courses Ratio</h3>
-                <div className="details-list">
-                  <div className="details-item">
-                    <span className="details-name">Weekend PMI-ACP® Prep</span>
-                    <span className="details-val">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-0 border-t border-gray-200">
+              <div className="p-6 border-b md:border-b-0 md:border-r border-gray-200">
+                <h3 className="font-bold text-gray-900 mb-4">Preferred Courses Ratio</h3>
+                <div className="flex flex-col gap-3">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-600 font-medium">Weekend PMI-ACP® Prep</span>
+                    <span className="font-bold text-gray-900">
                       {submissions.length > 0 
                         ? `${((submissions.filter(s => s.plan && s.plan.includes("Weekend")).length / submissions.length) * 100).toFixed(0)}%`
                         : "0%"}
                     </span>
                   </div>
-                  <div className="details-item">
-                    <span className="details-name">Week-Day PMI-ACP® Prep</span>
-                    <span className="details-val">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-600 font-medium">Week-Day PMI-ACP® Prep</span>
+                    <span className="font-bold text-gray-900">
                       {submissions.length > 0 
                         ? `${((submissions.filter(s => s.plan && s.plan.includes("Week-Day")).length / submissions.length) * 100).toFixed(0)}%`
                         : "0%"}
                     </span>
                   </div>
-                  <div className="details-item">
-                    <span className="details-name">General Agile PM</span>
-                    <span className="details-val">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-600 font-medium">General Agile PM</span>
+                    <span className="font-bold text-gray-900">
                       {submissions.length > 0 
                         ? `${((submissions.filter(s => s.plan && s.plan.includes("General")).length / submissions.length) * 100).toFixed(0)}%`
                         : "0%"}
@@ -1041,72 +744,54 @@ function AdminPage() {
       {/* Reply Modal */}
       {replyingSubmission && (
         <ModalOverlay onClose={() => setReplyingSubmission(null)}>
-          <div className="reply-modal" style={{ padding: "0.5rem" }}>
-            <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", marginBottom: "0.5rem" }}>Send Reply Email</h3>
-            <p style={{ color: "var(--muted-foreground)", marginBottom: "1rem", fontSize: "0.9rem" }}>
-              To: <strong>{replyingSubmission.name}</strong> ({replyingSubmission.email})
+          <div className="p-2 sm:p-4 max-w-lg w-full">
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Send Reply Email</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              To: <strong className="text-gray-800">{replyingSubmission.name}</strong> ({replyingSubmission.email})
             </p>
             
             {replyingSubmission.repliedAt && (
-              <div style={{ 
-                background: "rgba(59, 130, 246, 0.08)", 
-                borderLeft: "3px solid #3b82f6", 
-                padding: "10px", 
-                borderRadius: "4px", 
-                marginBottom: "1rem", 
-                fontSize: "0.85rem" 
-              }}>
-                <div style={{ fontWeight: "bold", color: "#3b82f6", marginBottom: "4px" }}>
+              <div className="bg-blue-50 border-l-4 border-blue-500 p-3 rounded-r-md mb-4 text-sm">
+                <div className="font-bold text-blue-700 mb-1">
                   Previous reply sent on {new Date(replyingSubmission.repliedAt).toLocaleString()}:
                 </div>
-                <div style={{ whiteSpace: "pre-wrap", color: "var(--foreground)" }}>
+                <div className="whitespace-pre-wrap text-gray-700">
                   {replyingSubmission.replyMessage}
                 </div>
               </div>
             )}
 
             <form onSubmit={handleSendReply}>
-              <div className="form-group" style={{ marginBottom: "1rem" }}>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "0.5rem" }}>Message Body *</label>
+              <div className="mb-4">
+                <label className="block text-sm font-bold text-gray-700 mb-2">Message Body *</label>
                 <textarea
                   required
                   rows={6}
                   value={replyMessageText}
                   onChange={(e) => setReplyMessageText(e.target.value)}
                   placeholder="Type your response here..."
-                  style={{ 
-                    width: "100%", 
-                    padding: "8px", 
-                    borderRadius: "4px", 
-                    border: "1px solid var(--border)", 
-                    background: "var(--background)", 
-                    color: "var(--foreground)",
-                    fontSize: "0.9rem",
-                    lineHeight: "1.5"
-                  }}
+                  className="w-full p-3 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white focus:ring-2 focus:ring-red-500 outline-none"
                 />
               </div>
               
               {replyError && (
-                <div className="login-error" style={{ marginBottom: "1rem" }}>
+                <div className="flex items-center gap-2 bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm">
                   <ShieldAlert size={16} /> {replyError}
                 </div>
               )}
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+              <div className="flex justify-end gap-3 mt-6">
                 <button
                   type="button"
                   onClick={() => setReplyingSubmission(null)}
-                  className="btn-secondary"
-                  style={{ padding: "8px 16px" }}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSendingReply}
-                  className="btn-primary"
-                  style={{ padding: "8px 20px" }}
+                  className="px-6 py-2 bg-red-600 text-white rounded-lg text-sm font-bold hover:bg-red-700 transition-colors disabled:opacity-50"
                 >
                   {isSendingReply ? "Sending..." : "Send Reply"}
                 </button>
