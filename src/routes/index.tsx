@@ -344,7 +344,7 @@ function CurriculumSection({ onEnroll }: { onEnroll: () => void }) {
   return (
     <section id="curriculum" className="curriculum-section">
       <div className="container">
-        <SectionHeader label="Course Curriculum" title="What You'll Master in 40 Hours" />
+        <SectionHeader label="Course Curriculum" title="What You'll Master in 25 Hours" />
         <div className="curriculum-list">
           {CURRICULUM.map((mod, idx) => (
             <div key={idx} className={`curriculum-item ${openIdx === idx ? "open" : ""}`}>
