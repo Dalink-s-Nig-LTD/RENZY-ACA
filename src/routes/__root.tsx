@@ -13,7 +13,7 @@ import { ConvexProvider, ConvexReactClient } from "convex/react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 
-const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL || "https://placeholder-url.convex.cloud");
+const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL || "https://adorable-starfish-951.convex.cloud");
 
 function NotFoundComponent() {
   return (
