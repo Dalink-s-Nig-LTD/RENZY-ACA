@@ -10,7 +10,7 @@ export const FAQ_DATABASE: FAQ[] = [
     answer: "You need a secondary degree, 21 contact hours of Agile training, 12 months of general project experience within the last 5 years, and 8 months of Agile project experience within the last 3 years.",
     keywords: ["prerequisite", "requirement", "eligibility", "qualify", "qualification"] },
   { id: 2, question: "How long is the training?",
-    answer: "Our PMI-ACP® Week-Day Prep runs for 40 hours over two intensive weeks, the Weekend Plan runs for six Saturdays, and the General Agile Project Management for Professionals is a pre-recorded self-paced study course.",
+    answer: "Our PMI-ACP® Week-Day Prep runs for 25 hours over two intensive weeks, the Weekend Plan runs for six Saturdays, and the General Agile Project Management for Professionals is a pre-recorded self-paced study course.",
     keywords: ["how long", "duration", "length", "weeks", "hours", "time"] },
   { id: 3, question: "What does the training cost?",
     answer: "The PMI-ACP® Week-Day Prep and Weekend Plans are ₦200,000 each (regular ₦350,000). The General Agile Project Management for Professionals plan is ₦100,000 (regular ₦180,000). Flexible instalment plans are available — contact us for details.",

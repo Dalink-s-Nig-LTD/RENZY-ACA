@@ -283,7 +283,7 @@ function CurriculumSection({ onEnroll }: { onEnroll: () => void }) {
           ))}
         </div>
         <div className="curriculum-cta">
-          <p className="curriculum-total">📚 40 hours total · 6 modules · Live sessions + recordings</p>
+          <p className="curriculum-total">📚 25 hours total · 6 modules · Live sessions + recordings</p>
           <button onClick={onEnroll} className="btn-primary">Enroll & Get Full Access →</button>
         </div>
       </div>
