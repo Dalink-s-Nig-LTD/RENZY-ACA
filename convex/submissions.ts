@@ -131,3 +131,25 @@ export const markReplied = mutation({
     return { success: true };
   },
 });
+
+// Clear all submissions — requires valid session token
+export const clearAll = mutation({
+  args: { token: v.string() },
+  handler: async (ctx, args) => {
+    const session = await ctx.db
+      .query("adminSessions")
+      .withIndex("by_token", (q) => q.eq("token", args.token))
+      .first();
+
+    if (!session || session.expiresAt < Date.now()) {
+      throw new Error("Unauthorized");
+    }
+
+    const submissions = await ctx.db.query("submissions").collect();
+    for (const sub of submissions) {
+      await ctx.db.delete(sub._id);
+    }
+    return { success: true };
+  },
+});
+

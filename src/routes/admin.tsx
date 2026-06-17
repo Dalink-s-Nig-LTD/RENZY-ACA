@@ -61,7 +61,8 @@ const generateMockVisits = (): PageVisit[] => {
   const paths = ["/", "/privacy-policy", "/cookie-policy"];
   const referrers = ["direct", "https://wa.me/", "https://google.com", "https://linkedin.com"];
 
-  for (let i = 14; i >= 0; i--) {
+  // Generate for past 30 days to support 30-day "all-time" view
+  for (let i = 30; i >= 0; i--) {
     const day = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
     const visitCount = Math.floor(Math.random() * 50) + 35;
     for (let j = 0; j < visitCount; j++) {
@@ -101,6 +102,7 @@ function AdminPage() {
 
   // Dashboard states
   const [visits, setVisits] = useState<PageVisit[]>([]);
+  const [timeRange, setTimeRange] = useState<"7days" | "alltime">("7days");
   
   // Filters and Views
   const [search, setSearch] = useState("");
@@ -158,10 +160,10 @@ function AdminPage() {
   useEffect(() => {
     if (isLoggedIn) {
       let storedVisits = localStorage.getItem("renzy_visits");
-      if (!storedVisits || JSON.parse(storedVisits).length < 20) {
+      if (!storedVisits || JSON.parse(storedVisits).length < 100) {
         const generated = generateMockVisits();
         const actual = storedVisits ? JSON.parse(storedVisits) : [];
-        const combined = [...actual, ...generated].slice(0, 1500);
+        const combined = [...actual, ...generated].slice(0, 3000);
         localStorage.setItem("renzy_visits", JSON.stringify(combined));
         storedVisits = JSON.stringify(combined);
       }
@@ -174,6 +176,7 @@ function AdminPage() {
   const logoutMutation = useMutation(api.auth.logout);
   const updateStatusMutation = useMutation(api.submissions.updateStatus);
   const deleteMutation = useMutation(api.submissions.remove);
+  const clearAllSubmissions = useMutation(api.submissions.clearAll);
   const sendReplyAction = useAction(api.emails.sendReply);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -248,6 +251,25 @@ function AdminPage() {
     }
   };
 
+  const handleResetData = async () => {
+    if (confirm("⚠️ WARNING: This will permanently delete all submissions from the database and regenerate mock traffic logs. This cannot be undone! Are you absolutely sure?")) {
+      try {
+        await clearAllSubmissions({ token });
+        
+        // Reset local page visits
+        localStorage.removeItem("renzy_visits");
+        const generated = generateMockVisits();
+        localStorage.setItem("renzy_visits", JSON.stringify(generated));
+        setVisits(generated);
+
+        toast.success("Database and traffic logs successfully reset");
+      } catch (err) {
+        console.error(err);
+        toast.error("Failed to reset dashboard data");
+      }
+    }
+  };
+
   const handleSendReply = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!replyingSubmission) return;
@@ -303,7 +325,7 @@ function AdminPage() {
     document.body.removeChild(link);
   };
 
-  // Filter submissions
+  // Filter submissions based on range and options
   const filteredSubmissions = submissions.filter((s) => {
     const matchesSearch = 
       s.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -312,14 +334,24 @@ function AdminPage() {
       (s.role && s.role.toLowerCase().includes(search.toLowerCase()));
     
     const matchesStatus = statusFilter === "all" || s.status === statusFilter;
-    
     const matchesPlan = planFilter === "all" || (s.plan && s.plan.toLowerCase().includes(planFilter.toLowerCase()));
+
+    // Time-range filter
+    if (timeRange === "7days") {
+      const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      if (s._creationTime < sevenDaysAgo) return false;
+    }
 
     return matchesSearch && matchesStatus && matchesPlan;
   });
 
-  const totalVisitsCount = visits.length;
-  const totalSubmissionsCount = submissions.length;
+  // Calculate filtered stats
+  const rangeVisits = timeRange === "7days"
+    ? visits.filter(v => new Date(v.timestamp).getTime() >= Date.now() - 7 * 24 * 60 * 60 * 1000)
+    : visits;
+
+  const totalVisitsCount = rangeVisits.length;
+  const totalSubmissionsCount = filteredSubmissions.length;
   const conversionRate = totalVisitsCount > 0 
     ? ((totalSubmissionsCount / totalVisitsCount) * 100).toFixed(1) 
     : "0.0";
@@ -330,8 +362,9 @@ function AdminPage() {
     const visitCounts: number[] = [];
     const enrollCounts: number[] = [];
     const now = new Date();
+    const rangeLength = timeRange === "7days" ? 7 : 30;
 
-    for (let i = 6; i >= 0; i--) {
+    for (let i = rangeLength - 1; i >= 0; i--) {
       const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
       const dateStr = d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
       days.push(dateStr);
@@ -472,8 +505,51 @@ function AdminPage() {
             <h1>Admin Dashboard</h1>
             <p>Monitor applications, cohorts and web traffic</p>
           </div>
-          <div className="header-actions">
-            <button onClick={exportToCSV} className="btn-secondary flex-center gap-xs">
+          <div className="header-actions" style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            {/* Time range selector */}
+            <div className="flex-center gap-xs" style={{ background: "rgba(255, 255, 255, 0.05)", padding: "4px", borderRadius: "6px", display: "inline-flex" }}>
+              <button 
+                onClick={() => setTimeRange("7days")} 
+                style={{ 
+                  padding: "6px 12px", 
+                  fontSize: "0.75rem", 
+                  fontWeight: "bold", 
+                  border: "none", 
+                  borderRadius: "4px", 
+                  background: timeRange === "7days" ? "var(--r-red)" : "transparent", 
+                  color: "white", 
+                  cursor: "pointer",
+                  transition: "all 0.2s"
+                }}
+              >
+                7 Days
+              </button>
+              <button 
+                onClick={() => setTimeRange("alltime")} 
+                style={{ 
+                  padding: "6px 12px", 
+                  fontSize: "0.75rem", 
+                  fontWeight: "bold", 
+                  border: "none", 
+                  borderRadius: "4px", 
+                  background: timeRange === "alltime" ? "var(--r-red)" : "transparent", 
+                  color: "white", 
+                  cursor: "pointer",
+                  transition: "all 0.2s"
+                }}
+              >
+                All-Time
+              </button>
+            </div>
+
+            <button 
+              onClick={handleResetData} 
+              className="btn-secondary flex-center gap-xs" 
+              style={{ color: "var(--r-red)", borderColor: "rgba(227, 27, 35, 0.2)", height: "34px", padding: "0 12px" }}
+            >
+              Reset Data
+            </button>
+            <button onClick={exportToCSV} className="btn-secondary flex-center gap-xs" style={{ height: "34px", padding: "0 12px" }}>
               <Download size={16} /> Export CSV
             </button>
             <button onClick={handleLogout} className="mobile-logout btn-logout">
@@ -713,8 +789,8 @@ function AdminPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {visits.length > 0 ? (
-                    visits.slice(0, 100).map((v) => (
+                  {rangeVisits.length > 0 ? (
+                    rangeVisits.slice(0, 100).map((v) => (
                       <tr key={v.id}>
                         <td className="text-light text-nowrap">
                           {new Date(v.timestamp).toLocaleDateString(undefined, { 
@@ -758,7 +834,7 @@ function AdminPage() {
             <div className="content-box-header">
               <h2>Web Traffic & Registration Conversions</h2>
               <p className="text-light" style={{ fontSize: ".85rem", marginTop: ".25rem" }}>
-                Traffic charts and daily signups trend for the past 7 days.
+                Traffic charts and daily signups trend for the past {timeRange === "7days" ? 7 : 30} days.
               </p>
             </div>
 
@@ -784,7 +860,9 @@ function AdminPage() {
                   ))}
 
                   {chartData.days.map((_, idx) => {
-                    const x = 50 + idx * 100;
+                    const x = 50 + idx * (600 / (chartData.days.length - 1 || 1));
+                    const shouldShowLine = timeRange === "7days" || idx % 5 === 0 || idx === chartData.days.length - 1;
+                    if (!shouldShowLine) return null;
                     return (
                       <line
                         key={idx}
@@ -800,7 +878,7 @@ function AdminPage() {
 
                   <path
                     d={chartData.visitCounts.map((val, idx) => {
-                      const x = 50 + idx * 100;
+                      const x = 50 + idx * (600 / (chartData.days.length - 1 || 1));
                       const y = 230 - (val / maxVisits) * 200;
                       return `${idx === 0 ? "M" : "L"} ${x} ${y}`;
                     }).join(" ")}
@@ -813,7 +891,7 @@ function AdminPage() {
                   <path
                     d={
                       chartData.visitCounts.map((val, idx) => {
-                        const x = 50 + idx * 100;
+                        const x = 50 + idx * (600 / (chartData.days.length - 1 || 1));
                         const y = 230 - (val / maxVisits) * 200;
                         return `${idx === 0 ? "M" : "L"} ${x} ${y}`;
                       }).join(" ") + ` L 650 230 L 50 230 Z`
@@ -823,34 +901,36 @@ function AdminPage() {
                   />
 
                   {chartData.enrollCounts.map((val, idx) => {
-                    const x = 50 + idx * 100;
+                    const x = 50 + idx * (600 / (chartData.days.length - 1 || 1));
                     const barHeight = val * 25;
                     const y = 230 - barHeight;
                     return (
                       <rect
                         key={idx}
-                        x={x - 10}
+                        x={x - (timeRange === "7days" ? 10 : 4)}
                         y={y}
-                        width="20"
+                        width={timeRange === "7days" ? "20" : "8"}
                         height={barHeight}
                         fill="var(--r-red)"
-                        rx="3"
+                        rx="2"
                         opacity="0.85"
                       />
                     );
                   })}
 
                   {chartData.visitCounts.map((val, idx) => {
-                    const x = 50 + idx * 100;
+                    const x = 50 + idx * (600 / (chartData.days.length - 1 || 1));
                     const y = 230 - (val / maxVisits) * 200;
+                    const shouldShowCircle = timeRange === "7days" || idx % 5 === 0 || idx === chartData.days.length - 1;
+                    if (!shouldShowCircle) return null;
                     return (
                       <g key={idx}>
-                        <circle cx={x} cy={y} r="5" fill="#3b82f6" stroke="white" strokeWidth="2" />
+                        <circle cx={x} cy={y} r="4" fill="#3b82f6" stroke="white" strokeWidth="1.5" />
                         <text 
                           x={x} 
-                          y={y - 10} 
+                          y={y - 8} 
                           fill="#1a202c" 
-                          fontSize="10" 
+                          fontSize="9" 
                           fontWeight="bold" 
                           textAnchor="middle"
                         >
@@ -862,19 +942,19 @@ function AdminPage() {
 
                   {chartData.enrollCounts.map((val, idx) => {
                     if (val === 0) return null;
-                    const x = 50 + idx * 100;
+                    const x = 50 + idx * (600 / (chartData.days.length - 1 || 1));
                     const y = 230 - val * 25;
                     return (
                       <text
                         key={idx}
                         x={x}
-                        y={y - 8}
+                        y={y - 6}
                         fill="var(--r-red)"
-                        fontSize="10"
+                        fontSize="9"
                         fontWeight="bold"
                         textAnchor="middle"
                       >
-                        {val} reg
+                        {val}
                       </text>
                     );
                   })}
@@ -888,10 +968,16 @@ function AdminPage() {
                 </svg>
               </div>
 
-              <div className="chart-xaxis">
-                {chartData.days.map((day, idx) => (
-                  <div key={idx} className="xaxis-label">{day}</div>
-                ))}
+              <div className="chart-xaxis" style={{ display: "flex", justifyContent: "space-between", padding: "0 40px" }}>
+                {chartData.days.map((day, idx) => {
+                  const shouldShowLabel = timeRange === "7days" || idx % 5 === 0 || idx === chartData.days.length - 1;
+                  if (!shouldShowLabel) return null;
+                  return (
+                    <div key={idx} className="xaxis-label" style={{ fontSize: "10px", color: "var(--muted-foreground)" }}>
+                      {day}
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
