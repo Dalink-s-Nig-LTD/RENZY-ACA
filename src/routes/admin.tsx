@@ -6,6 +6,10 @@ import {
 } from "lucide-react";
 import { LOGO_URL } from "../lib/constants";
 import { openExternal } from "../lib/email";
+import { ConvexProvider, ConvexReactClient } from "convex/react";
+
+const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL || "https://placeholder-url.convex.cloud");
+
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -14,8 +18,16 @@ export const Route = createFileRoute("/admin")({
       { name: "description", content: "Renzy Academy Admin Portal" },
     ],
   }),
-  component: AdminPage,
+  component: AdminPageWrapper,
 });
+
+function AdminPageWrapper() {
+  return (
+    <ConvexProvider client={convex}>
+      <AdminPage />
+    </ConvexProvider>
+  );
+}
 
 interface Registration {
   id: string;
