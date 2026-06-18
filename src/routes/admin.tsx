@@ -2,11 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { 
   Users, Percent, Calendar, Search, LogOut, CheckCircle, 
-  Clock, AlertCircle, XCircle, Download, Trash2, Edit2, ShieldAlert, Mail, Menu, X, Eye, EyeOff
+  Clock, AlertCircle, XCircle, Download, Trash2, Edit2, ShieldAlert, Mail, Menu, X, Eye, EyeOff, Phone, MessageCircle
 } from "lucide-react";
 import { LOGO_URL } from "../lib/constants";
 import { openExternal } from "../lib/email";
-import { useQuery, useMutation, useAction } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { toast } from "sonner";
 import { ModalOverlay } from "../components/ModalOverlay";
@@ -588,6 +588,26 @@ function AdminPage() {
                             >
                               <Mail size={16} />
                             </button>
+                            {s.phone && (
+                              <a 
+                                href={`https://wa.me/${s.phone.replace(/[^0-9]/g, '')}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="p-1.5 rounded bg-green-50 text-green-600 hover:bg-green-100 transition-colors"
+                                title={`WhatsApp ${s.name}`}
+                              >
+                                <MessageCircle size={16} />
+                              </a>
+                            )}
+                            {s.phone && (
+                              <a 
+                                href={`tel:${s.phone}`}
+                                className="p-1.5 rounded bg-purple-50 text-purple-600 hover:bg-purple-100 transition-colors"
+                                title={`Call ${s.name}`}
+                              >
+                                <Phone size={16} />
+                              </a>
+                            )}
                             <button 
                               onClick={() => deleteSubmission(s._id)}
                               className="p-1.5 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
