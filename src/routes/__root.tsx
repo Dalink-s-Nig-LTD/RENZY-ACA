@@ -119,7 +119,7 @@ n.queue=[];t=b.createElement(e);t.async=!0;
 t.src=v;s=b.getElementsByTagName(e)[0];
 s.parentNode.insertBefore(t,s)}(window, document,'script',
 'https://connect.facebook.net/en_US/fbevents.js');
-fbq('init', 'YOUR_PIXEL_ID_HERE');
+fbq('init', '1044393374823058');
 fbq('track', 'PageView');`
       }
     ],
@@ -142,7 +142,7 @@ function RootShell({ children }: { children: ReactNode }) {
             height="1" 
             width="1" 
             style={{ display: "none" }}
-            src="https://www.facebook.com/tr?id=YOUR_PIXEL_ID_HERE&ev=PageView&noscript=1"
+            src="https://www.facebook.com/tr?id=1044393374823058&ev=PageView&noscript=1"
             alt=""
           />
         </noscript>
