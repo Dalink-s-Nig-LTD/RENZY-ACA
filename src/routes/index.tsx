@@ -429,7 +429,7 @@ function Index() {
               <div className="stat"><span className="stat-number">{statsVisible ? <AnimatedCount target={500} suffix="+" /> : "0+"}</span><span className="stat-label">Trained</span></div>
             </div>
             <div className="hero-cta-group">
-              <button onClick={openEnroll} className="btn-primary">Start Your Journey →</button>
+              <button onClick={() => openEnroll()} className="btn-primary">Start Your Journey →</button>
               <a href="#why" className="btn-secondary">Learn More</a>
             </div>
           </div>
@@ -523,7 +523,7 @@ function Index() {
             <h2>Position Yourself for Global Relevance</h2>
             <p>Do not wait until the market moves ahead without you.</p>
             <div className="cta-buttons">
-              <button onClick={openEnroll} className="btn-white">Enroll Now</button>
+              <button onClick={() => openEnroll()} className="btn-white">Enroll Now</button>
               <button type="button" onClick={() => openExternal(WHATSAPP_LINK)} className="btn-outline-white">WhatsApp Us</button>
             </div>
             <ContactInfo variant="inline" />

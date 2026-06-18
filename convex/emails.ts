@@ -11,7 +11,6 @@ export const sendReply = action({
   handler: async (ctx, args) => {
     // Validate session
     const session = await ctx.runQuery(
-      // @ts-expect-error internal API usage
       "auth:validateSession" as any,
       { token: args.token }
     );
@@ -19,7 +18,6 @@ export const sendReply = action({
     // We need to validate manually since actions can't query directly
     // Instead, fetch the submission and send the email
     const submission = await ctx.runQuery(
-      // @ts-expect-error internal API usage
       "submissions:getById" as any,
       { id: args.submissionId, token: args.token }
     );
@@ -79,7 +77,6 @@ export const sendReply = action({
 
       // Mark submission as replied in DB
       await ctx.runMutation(
-        // @ts-expect-error internal API usage
         "submissions:markReplied" as any,
         {
           id: args.submissionId,

@@ -196,9 +196,8 @@ function AdminPage() {
     setIsSendingReply(true);
     setReplyError(null);
     try {
-      // @ts-expect-error action call
       const res = await sendReplyAction({
-        submissionId: replyingSubmission._id,
+        submissionId: replyingSubmission._id as any,
         replyMessage: replyMessageText,
         token,
       });
