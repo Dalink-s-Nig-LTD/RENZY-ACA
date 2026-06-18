@@ -116,7 +116,7 @@ function AdminPage() {
   const logoutMutation = useMutation(api.auth.logout);
   const updateStatusMutation = useMutation(api.submissions.updateStatus);
   const deleteMutation = useMutation(api.submissions.remove);
-  const sendReplyAction = useAction(api.emails.sendReply);
+  const markRepliedMutation = useMutation(api.submissions.markReplied);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -196,21 +196,17 @@ function AdminPage() {
     setIsSendingReply(true);
     setReplyError(null);
     try {
-      const res = await sendReplyAction({
-        submissionId: replyingSubmission._id as any,
-        replyMessage: replyMessageText,
+      await markRepliedMutation({
+        id: replyingSubmission._id as any,
+        replyMessage: replyMessageText || "Replied via email client.",
         token,
       });
-      if (res.success) {
-        toast.success("Reply email sent successfully!");
-        setReplyingSubmission(null);
-        setReplyMessageText("");
-      } else {
-        setReplyError(res.error || "Failed to send reply email");
-      }
+      toast.success("Marked as replied!");
+      setReplyingSubmission(null);
+      setReplyMessageText("");
     } catch (err) {
       console.error(err);
-      setReplyError("An error occurred. Make sure your RESEND_API_KEY is configured.");
+      setReplyError("An error occurred while marking as replied.");
     } finally {
       setIsSendingReply(false);
     }
@@ -772,15 +768,29 @@ function AdminPage() {
               </div>
             )}
 
+            <div className="mb-6">
+              <a 
+                href={`mailto:${replyingSubmission.email}?subject=Re:%20Your%20Renzy%20Academy%20Inquiry`}
+                className="w-full inline-flex justify-center items-center gap-2 px-6 py-3 bg-red-50 text-red-700 font-bold rounded-lg border border-red-200 hover:bg-red-100 transition-colors"
+                target="_blank"
+                rel="noreferrer"
+              >
+                <Mail size={18} />
+                Open Email App to Reply
+              </a>
+              <p className="text-xs text-gray-500 mt-2 text-center">
+                This opens your native email client (Gmail, Outlook, etc.).
+              </p>
+            </div>
+
             <form onSubmit={handleSendReply}>
               <div className="mb-4">
-                <label className="block text-sm font-bold text-gray-700 mb-2">Message Body *</label>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Internal Note (Optional)</label>
                 <textarea
-                  required
-                  rows={6}
+                  rows={4}
                   value={replyMessageText}
                   onChange={(e) => setReplyMessageText(e.target.value)}
-                  placeholder="Type your response here..."
+                  placeholder="Record what was said for future reference..."
                   className="w-full p-3 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white focus:ring-2 focus:ring-red-500 outline-none"
                 />
               </div>
@@ -804,7 +814,7 @@ function AdminPage() {
                   disabled={isSendingReply}
                   className="px-6 py-2 bg-red-600 text-white rounded-lg text-sm font-bold hover:bg-red-700 transition-colors disabled:opacity-50"
                 >
-                  {isSendingReply ? "Sending..." : "Send Reply"}
+                  {isSendingReply ? "Saving..." : "Mark as Replied"}
                 </button>
               </div>
             </form>
