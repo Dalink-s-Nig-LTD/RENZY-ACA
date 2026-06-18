@@ -42,8 +42,8 @@ export const sendReply = action({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          from: "Renzy Academy <onboarding@resend.dev>",
-          to: [submission.email],
+          from: process.env.RESEND_FROM || "Renzy Academy <onboarding@resend.dev>",
+          to: [process.env.NODE_ENV !== "production" ? "eduplusconsultzoom@gmail.com" : submission.email],
           subject: `Re: Your ${submission.type === "enrollment" ? "Enrollment Application" : "Support Request"} — Renzy Academy`,
           html: `
             <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto;">
